@@ -1,7 +1,15 @@
 {
   "name": "docnest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "可复用的本地 Markdown 文档中心",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iambean/docnest.git"
+  },
+  "homepage": "https://github.com/iambean/docnest#readme",
+  "bugs": {
+    "url": "https://github.com/iambean/docnest/issues"
+  },
   "type": "commonjs",
   "bin": {
     "docnest": "dist/cli.js"
