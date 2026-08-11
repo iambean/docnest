@@ -1,0 +1,60 @@
+{
+  "name": "docnest",
+  "version": "0.1.0",
+  "description": "可复用的本地 Markdown 文档中心",
+  "type": "commonjs",
+  "bin": {
+    "docnest": "dist/cli.js"
+  },
+  "exports": {
+    "./config": "./dist/config.js",
+    "./server": "./dist/server.js",
+    ".": "./dist/config.js"
+  },
+  "files": [
+    "dist",
+    "server/favicon.ico",
+    "server/static/css",
+    "server/static/favicon.ico",
+    "server/static/img/404-deep-space-light.webp",
+    "server/static/img/404-deep-space.webp",
+    "server/static/js",
+    "server/views"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts serve",
+    "start": "node dist/cli.js serve",
+    "test": "npm run build && node --test",
+    "pack:check": "npm run build && npm pack --dry-run",
+    "prepublishOnly": "npm run pack:check"
+  },
+  "keywords": [
+    "markdown",
+    "documentation",
+    "mermaid",
+    "docs-server"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "dompurify": "^3.2.7",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "github-markdown-css": "^5.8.1",
+    "highlight.js": "^11.9.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
+    "markdown-it": "^14.0.0",
+    "mermaid": "^10.9.5",
+    "socket.io": "^4.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

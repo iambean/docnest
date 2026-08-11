@@ -1,0 +1,37 @@
+<header class="header">
+  <div class="header-content">
+    <div class="header-title-group">
+      <h1>
+        <% if (docsLogo) { %><img class="brand-logo" src="<%= docsLogo %>" alt=""><% } else { %>📚<% } %>
+        <%= docsTitle %>
+      </h1>
+      <% if (typeof showBackLink !== 'undefined' && showBackLink) { %>
+        <a href="/" class="back-link">← 返回目录</a>
+      <% } else { %>
+        <p class="subtitle"><%= docsSubtitle %></p>
+      <% } %>
+    </div>
+    <div class="header-meta">
+      <div class="header-actions">
+        <% if (typeof showPrintButton !== 'undefined' && showPrintButton) { %>
+          <button type="button" id="print-doc-btn" class="header-action-btn print-btn" title="打印当前文章">
+            <span class="print-icon">🖨️</span>
+            <span class="header-action-text">打印</span>
+          </button>
+        <% } %>
+        <% if (typeof showPdfButton !== 'undefined' && showPdfButton) { %>
+          <button type="button" id="download-doc-pdf-btn" class="header-action-btn download-pdf-btn" title="下载当前文章 PDF">
+            <span class="download-pdf-icon">⬇️</span>
+            <span class="header-action-text">下载 PDF</span>
+          </button>
+        <% } %>
+        <div class="theme-selector">
+          <button id="theme-toggle" class="header-action-btn theme-toggle" title="点击切换：跟随系统 / 浅色 / 深色">
+            <span class="theme-icon">💻</span>
+            <span class="theme-text">跟随系统</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

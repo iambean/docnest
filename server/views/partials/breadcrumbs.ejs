@@ -1,0 +1,15 @@
+<nav class="breadcrumbs" aria-label="面包屑导航">
+  <ol>
+    <li class="breadcrumb-item"><a href="/" class="breadcrumb-link">首页</a></li>
+    <% breadcrumbs.forEach(function(crumb) { %>
+      <li class="breadcrumb-separator" aria-hidden="true">/</li>
+      <% if (crumb.isLast) { %>
+        <li class="breadcrumb-item breadcrumb-current" aria-current="page"><%= crumb.name %></li>
+      <% } else if (crumb.url) { %>
+        <li class="breadcrumb-item"><a href="<%= crumb.url %>" class="breadcrumb-link"><%= crumb.name %></a></li>
+      <% } else { %>
+        <li class="breadcrumb-item breadcrumb-text"><%= crumb.name %></li>
+      <% } %>
+    <% }); %>
+  </ol>
+</nav>

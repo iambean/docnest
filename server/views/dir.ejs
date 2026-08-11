@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title><%= dirName %> - <%= docsTitle %></title>
+  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" sizes="any">
+  <link id="markdown-theme" rel="stylesheet" href="/vendor/github-markdown-css/github-markdown-light.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/highlight.css?v=<%= assetVersion %>">
+  <script src="/mermaid/mermaid.min.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/theme.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
+</head>
+<body data-current-dir-path="<%= currentDirPath %>">
+  <div class="container">
+    <%- include('partials/header', { showBackLink: true, showPrintButton: false, showPdfButton: false }) %>
+    <div class="content">
+      <%- include('partials/sidebar') %>
+      <main class="main-content">
+        <%- include('partials/breadcrumbs') %>
+        <div class="dir-listing-page">
+          <div class="dir-listing-header">
+            <span class="dir-listing-header-icon">📁</span>
+            <h2 class="dir-listing-title"><%= dirName %></h2>
+            <% if (listing.dirs.length === 0 && listing.files.length === 0) { %>
+              <span class="dir-listing-empty-tag">空目录</span>
+            <% } else { %>
+              <span class="dir-listing-count"><%= listing.dirs.length + listing.files.length %> 项</span>
+            <% } %>
+          </div>
+
+          <% if (listing.dirs.length === 0 && listing.files.length === 0) { %>
+            <div class="dir-listing-empty">
+              <div class="dir-listing-empty-icon">📭</div>
+              <p>此目录下暂无内容</p>
+            </div>
+          <% } else { %>
+            <div class="dir-listing-grid">
+              <% listing.dirs.forEach(function(dir) { %>
+                <a href="/dir?path=<%= encodeURIComponent(dir.path) %>" class="dir-listing-item is-dir">
+                  <span class="dir-listing-item-icon">📁</span>
+                  <span class="dir-listing-item-name"><%= dir.name %></span>
+                  <span class="dir-listing-item-arrow">→</span>
+                </a>
+              <% }); %>
+              <% listing.files.forEach(function(file) { %>
+                <a href="/doc?path=<%= encodeURIComponent(file.path) %>" class="dir-listing-item is-file">
+                  <span class="dir-listing-item-icon">📄</span>
+                  <span class="dir-listing-item-name"><%= file.name %></span>
+                </a>
+              <% }); %>
+            </div>
+          <% } %>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // 高亮左侧菜单中的当前目录节点
+    (function() {
+      var STORAGE_KEY = <%- JSON.stringify(docsStorageKeyPrefix + ':open-dirs') %>;
+      var currentDirRaw = '<%= currentDirPath %>';
+      var sidebar = document.getElementById('sidebar');
+      var treeNav = sidebar ? sidebar.querySelector('.tree-nav') : null;
+      if (!treeNav || !currentDirRaw) return;
+
+      function getDirPath(li) {
+        try {
+          var p = li.getAttribute('data-dir-path');
+          return (p ? decodeURIComponent(p) : '').replace(/\\/g, '/').trim();
+        } catch (e) { return ''; }
+      }
+
+      function ancestorDirPaths(dirPath) {
+        var parts = dirPath.replace(/\\/g, '/').split('/').filter(Boolean);
+        var list = [];
+        for (var i = 1; i <= parts.length; i++) list.push(parts.slice(0, i).join('/'));
+        return list;
+      }
+
+      var ancestors = ancestorDirPaths(currentDirRaw);
+
+      // 展开祖先路径
+      var saved = [];
+      try {
+        var raw = sessionStorage.getItem(STORAGE_KEY);
+        if (raw) saved = JSON.parse(raw);
+      } catch (e) {}
+      var toExpand = new Set(saved);
+      ancestors.forEach(function(p) { toExpand.add(p); });
+
+      treeNav.querySelectorAll('.directory').forEach(function(li) {
+        var children = li.querySelector('.dir-children');
+        if (!children) return;
+        var dirPath = getDirPath(li);
+        var open = toExpand.has(dirPath);
+        children.style.display = open ? 'block' : 'none';
+        li.classList.toggle('collapsed', !open);
+      });
+
+      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(toExpand))); } catch (e) {}
+
+      // 高亮匹配的目录节点：移除所有 file-link active，给匹配的 dir-toggle 加 active
+      treeNav.querySelectorAll('.file-link.active').forEach(function(link) {
+        link.classList.remove('active');
+      });
+      treeNav.querySelectorAll('.dir-toggle').forEach(function(toggle) {
+        toggle.classList.remove('active');
+      });
+
+      treeNav.querySelectorAll('.directory').forEach(function(li) {
+        var dirPath = getDirPath(li);
+        if (dirPath === currentDirRaw) {
+          var toggle = li.querySelector('.dir-toggle');
+          if (toggle) toggle.classList.add('active');
+        }
+      });
+
+      // 展开当前目录
+      treeNav.querySelectorAll('.directory').forEach(function(li) {
+        var dirPath = getDirPath(li);
+        if (ancestors.indexOf(dirPath) !== -1 || dirPath === currentDirRaw) {
+          var children = li.querySelector('.dir-children');
+          if (children) { children.style.display = 'block'; li.classList.remove('collapsed'); }
+        }
+      });
+
+      // 实时更新（Socket 监听）
+      var socket = io();
+      socket.on('file-added', function() { location.reload(); });
+      socket.on('file-deleted', function() { location.reload(); });
+      socket.on('file-changed', function(data) {
+        // 目录结构变化时刷新
+        location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>

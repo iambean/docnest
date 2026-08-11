@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>文件未找到 - <%= docsTitle %></title>
+  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" sizes="any">
+  <link id="markdown-theme" rel="stylesheet" href="/vendor/github-markdown-css/github-markdown-light.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/highlight.css?v=<%= assetVersion %>">
+  <script src="/static/js/core/theme.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
+</head>
+<body class="not-found-page">
+  <div class="container">
+    <%- include('partials/header', { showBackLink: true }) %>
+    <div class="content">
+      <%- include('partials/sidebar') %>
+      <main class="main-content not-found-main">
+        <section class="deep-space-404" aria-labelledby="not-found-title">
+          <div class="deep-space-404__content">
+            <p class="deep-space-404__eyebrow">DEEP SPACE · SIGNAL LOST</p>
+            <p class="deep-space-404__code" aria-label="错误 404">404</p>
+            <h2 id="not-found-title">这份文档，暂时失联</h2>
+            <p class="deep-space-404__description">
+              它可能已迁移、重命名，或正穿过一片未知的事件视界。
+            </p>
+            <% if (requestedPath) { %>
+              <p class="deep-space-404__path">
+                <span>最后坐标</span>
+                <code title="<%= requestedPath %>"><%= requestedPath %></code>
+              </p>
+            <% } %>
+            <div class="deep-space-404__actions">
+              <a class="deep-space-404__primary-action" href="/">返回文档目录</a>
+              <button class="deep-space-404__secondary-action" type="button" id="not-found-back">
+                返回上一页
+              </button>
+            </div>
+          </div>
+          <p class="deep-space-404__caption" aria-hidden="true">LOCAL DOCUMENT SERVICE</p>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="/static/js/utils/app.js?v=<%= assetVersion %>"></script>
+  <script>
+    document.getElementById('not-found-back')?.addEventListener('click', () => {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+      window.location.assign('/');
+    });
+  </script>
+</body>
+</html>

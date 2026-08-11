@@ -1,0 +1,16 @@
+<!-- 图表查看器模态框 -->
+<div id="diagram-viewer" class="diagram-viewer">
+  <div class="diagram-viewer-content">
+    <button class="diagram-viewer-close" onclick="closeDiagramViewer()">×</button>
+    <div class="diagram-viewer-controls">
+      <button onclick="zoomDiagram('out')">缩小</button>
+      <span class="zoom-info" id="zoom-info">100%</span>
+      <button onclick="zoomDiagram('in')">放大</button>
+      <button onclick="resetDiagramZoom()">重置</button>
+      <button onclick="toggleFullscreen()" class="fullscreen-btn" id="fullscreen-btn">⛶ 全屏</button>
+      <button onclick="copyCurrentDiagram()" class="copy-btn">📋 复制</button>
+      <button onclick="downloadCurrentDiagram()" class="download-btn">⬇️ 下载</button>
+    </div>
+    <div id="diagram-viewer-svg-container" class="diagram-viewer-svg-container"></div>
+  </div>
+</div>

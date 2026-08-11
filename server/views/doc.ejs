@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title><%= fileName %> - <%= docsTitle %></title>
+  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" sizes="any">
+  <link id="markdown-theme" rel="stylesheet" href="/vendor/github-markdown-css/github-markdown-light.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/highlight.css?v=<%= assetVersion %>">
+  <script src="/mermaid/mermaid.min.js?v=<%= assetVersion %>"></script>
+  <script>
+    window.DOCNEST_CONFIG = {
+      watermarkEnabled: <%= docsWatermarkEnabled ? 'true' : 'false' %>,
+      watermarkText: <%- JSON.stringify(docsWatermarkText) %>
+    };
+  </script>
+  <!-- 基础功能模块 -->
+  <script src="/static/js/core/theme.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/mermaid-init.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/doc-client-nav.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/doc-pdf-export.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
+</head>
+<body data-current-path="<%= currentPath %>">
+  <div class="container">
+    <%- include('partials/header', { showBackLink: true, showPrintButton: true, showPdfButton: true }) %>
+    <div class="content">
+      <%- include('partials/sidebar') %>
+      <main class="main-content">
+        <%- include('partials/breadcrumbs') %>
+        <div class="doc-layout">
+          <aside class="doc-toc" id="doc-toc" aria-label="文档章节导航"></aside>
+          <article class="markdown-body">
+            <%- content %>
+          </article>
+        </div>
+      </main>
+    </div>
+  </div>
+  <%- include('partials/diagram-viewer') %>
+  <!-- 按依赖顺序加载模块 -->
+  <script src="/static/js/utils/modal-stack.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/diagram/diagram-viewer.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/diagram/diagram-zoom.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/diagram/diagram-drag.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/diagram/diagram-controls.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/diagram/diagram-download.js?v=<%= assetVersion %>"></script>
+  <script src="/static/js/utils/app.js?v=<%= assetVersion %>"></script>
+  <script>
+    // 打印当前文章
+    (function() {
+      const printBtn = document.getElementById('print-doc-btn');
+      if (printBtn) {
+        printBtn.addEventListener('click', function() {
+          window.print();
+        });
+      }
+    })();
+
+    // 高亮当前文档；展开状态：恢复上次保存的 + 当前文档所在路径，不折叠其他已展开项
+    (function() {
+      const STORAGE_KEY = <%- JSON.stringify(docsStorageKeyPrefix + ':open-dirs') %>;
+      const currentPathRaw = '<%= currentPath %>';
+      const sidebar = document.getElementById('sidebar');
+      const treeNav = sidebar?.querySelector('.tree-nav');
+      let activeLink = null;
+      function pathNorm(p) {
+        return (p || '').trim().replace(/\.(html|md)$/i, '').replace(/\\/g, '/');
+      }
+      function pathFromHref(href) {
+        if (!href) return '';
+        try {
+          var u = new URL(href, window.location.origin);
+          if (u.searchParams.has('path')) return u.searchParams.get('path') || '';
+          var idx = u.pathname.indexOf('/doc/');
+          if (idx !== -1) return u.pathname.slice(idx + 5).replace(/\.html$/i, '');
+        } catch (e) {}
+        return '';
+      }
+      function ancestorDirPaths(filePath) {
+        var norm = pathNorm(filePath);
+        var parts = norm.split('/').filter(Boolean);
+        if (parts.length <= 1) return [];
+        var list = [];
+        for (var i = 1; i < parts.length; i++) list.push(parts.slice(0, i).join('/'));
+        return list;
+      }
+      function getDirPath(li) {
+        try {
+          var p = li.getAttribute('data-dir-path');
+          return (p ? decodeURIComponent(p) : '').replace(/\\/g, '/').trim();
+        } catch (e) { return ''; }
+      }
+
+      var currentNorm = pathNorm(currentPathRaw);
+      if (treeNav) {
+        var saved = [];
+        try {
+          var raw = sessionStorage.getItem(STORAGE_KEY);
+          if (raw) saved = JSON.parse(raw);
+        } catch (e) {}
+        var toExpand = new Set(saved);
+        ancestorDirPaths(currentNorm).forEach(function(p) { toExpand.add(p); });
+
+        treeNav.querySelectorAll('.directory').forEach(function(li) {
+          var children = li.querySelector('.dir-children');
+          if (!children) return;
+          var dirPath = getDirPath(li);
+          var open = toExpand.has(dirPath);
+          children.style.display = open ? 'block' : 'none';
+          li.classList.toggle('collapsed', !open);
+        });
+
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(toExpand)));
+      }
+
+      document.querySelectorAll('.file-link').forEach(function(link) {
+        var linkPath = pathFromHref(link.getAttribute('href') || link.href);
+        if (pathNorm(linkPath) === currentNorm) {
+          link.classList.add('active');
+          activeLink = link;
+        }
+      });
+
+      if (treeNav && activeLink) {
+        var linkRect = activeLink.getBoundingClientRect();
+        var navRect = treeNav.getBoundingClientRect();
+        var isInView = linkRect.top >= navRect.top && linkRect.bottom <= navRect.bottom;
+        if (!isInView) {
+          treeNav.scrollTop = activeLink.offsetTop - 10;
+        }
+      }
+
+      window.saveTreeOpenState = function() {
+        if (!treeNav) return;
+        var open = [];
+        treeNav.querySelectorAll('.directory').forEach(function(li) {
+          if (li.classList.contains('collapsed')) return;
+          var p = getDirPath(li);
+          if (p) open.push(p);
+        });
+        try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(open)); } catch (e) {}
+      };
+
+      function setActiveTocLinkById(id) {
+        const tocEl = document.getElementById('doc-toc');
+        if (!tocEl || !id) return;
+        const links = Array.from(tocEl.querySelectorAll('a'));
+        links.forEach(function(link) {
+          link.classList.remove('is-active');
+        });
+        tocEl.querySelectorAll('li').forEach(function(li) {
+          li.classList.remove('is-active-parent');
+        });
+
+        const targetLink = links.find(function(link) {
+          const href = link.getAttribute('href') || '';
+          if (!href.startsWith('#')) return false;
+          return decodeURIComponent(href.slice(1)) === id;
+        });
+        if (!targetLink) return;
+
+        targetLink.classList.add('is-active');
+        let parentLi = targetLink.closest('li');
+        while (parentLi) {
+          parentLi.classList.add('is-active-parent');
+          const parentUl = parentLi.parentElement;
+          if (!parentUl) break;
+          parentLi = parentUl.closest('li');
+        }
+      }
+
+      function getOrCreateSubList(li) {
+        const existing = Array.from(li.children).find(function(child) {
+          return child.tagName === 'UL' && child.classList.contains('doc-toc-sublist');
+        });
+        if (existing) return existing;
+        const sub = document.createElement('ul');
+        sub.className = 'doc-toc-sublist';
+        li.appendChild(sub);
+        return sub;
+      }
+
+      function buildDocToc() {
+        const tocEl = document.getElementById('doc-toc');
+        const articleEl = document.querySelector('.markdown-body');
+        if (!tocEl || !articleEl) return;
+
+        const headings = Array.from(articleEl.querySelectorAll('h2, h3, h4'));
+        if (headings.length === 0) {
+          tocEl.style.display = 'none';
+          tocEl.innerHTML = '';
+          return;
+        }
+
+        tocEl.style.display = '';
+        const title = document.createElement('div');
+        title.className = 'doc-toc-title';
+        title.textContent = '本页导航';
+
+        const rootList = document.createElement('ul');
+        rootList.className = 'doc-toc-list toc-root';
+        const stack = [{ level: 1, list: rootList }];
+
+        headings.forEach(function(h, idx) {
+          if (!h.id) h.id = 'section-' + (idx + 1);
+
+          let level = Number(h.tagName.slice(1));
+          if (!Number.isFinite(level) || level < 2) level = 2;
+          if (level > 4) level = 4;
+
+          while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+            stack.pop();
+          }
+          const parent = stack[stack.length - 1];
+          if (level > parent.level + 1) {
+            level = parent.level + 1;
+          }
+
+          const li = document.createElement('li');
+          li.className = 'toc-lv' + level;
+          const a = document.createElement('a');
+          a.href = '#' + encodeURIComponent(h.id);
+          a.textContent = (h.textContent || '').trim();
+          li.appendChild(a);
+          parent.list.appendChild(li);
+
+          stack.push({
+            level: level,
+            list: getOrCreateSubList(li),
+          });
+        });
+
+        tocEl.innerHTML = '';
+        tocEl.appendChild(title);
+        tocEl.appendChild(rootList);
+        if (window.location.hash && window.location.hash.length > 1) {
+          setActiveTocLinkById(decodeURIComponent(window.location.hash.slice(1)));
+        }
+
+        tocEl.onclick = function(e) {
+          const link = e.target.closest('a');
+          if (!link) return;
+          const hash = link.getAttribute('href') || '';
+          if (!hash.startsWith('#')) return;
+          const id = decodeURIComponent(hash.slice(1));
+          const target = document.getElementById(id);
+          if (!target) return;
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const base = window.location.pathname + window.location.search;
+          history.replaceState(history.state, '', base + '#' + encodeURIComponent(id));
+          setActiveTocLinkById(id);
+        };
+      }
+
+      function scrollToDocHash() {
+        const rawHash = window.location.hash;
+        if (!rawHash || rawHash.length <= 1) return;
+        const id = decodeURIComponent(rawHash.slice(1));
+        const target = document.getElementById(id);
+        if (!target) return;
+        requestAnimationFrame(function() {
+          target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        });
+        setActiveTocLinkById(id);
+      }
+
+      window.buildDocToc = buildDocToc;
+      window.scrollToDocHash = scrollToDocHash;
+      window.addEventListener('hashchange', scrollToDocHash);
+      buildDocToc();
+      scrollToDocHash();
+      
+      // 监听右侧文档内容区域的链接点击事件
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent && treeNav && sidebar) {
+        mainContent.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (!link) return;
+          
+          // 检查点击是否发生在左侧菜单栏（如果是，不做任何处理）
+          if (sidebar.contains(link)) {
+            return;
+          }
+          
+          // 检查是否是文档系统内的链接
+          const href = link.getAttribute('href');
+          if (!href) return;
+          
+          // 判断是否是文档系统内的链接（排除外部链接、锚点、目录页链接）
+          const isDocLink = (href.startsWith('/doc?') ||
+                            href.startsWith('/doc/') ||
+                            href.startsWith('./') ||
+                            href.startsWith('../') ||
+                            (href.startsWith('/') && !href.startsWith('//') && !href.startsWith('/http'))) &&
+                            !href.startsWith('#') &&
+                            !href.startsWith('/dir') &&
+                            !href.startsWith('http://') &&
+                            !href.startsWith('https://') &&
+                            !href.startsWith('mailto:');
+          
+          if (!isDocLink) return;
+          
+          // 从链接中提取路径信息
+          let targetPath = '';
+          try {
+            if (href.startsWith('/doc?')) {
+              // 格式：/doc?path=xxx
+              const url = new URL(href, window.location.origin);
+              targetPath = url.searchParams.get('path') || '';
+            } else if (href.startsWith('/doc/')) {
+              targetPath = href.replace('/doc/', '');
+            } else if (href.startsWith('./') || href.startsWith('../')) {
+              // 相对路径，需要解析
+              const currentDir = currentNorm.includes('/') ? currentNorm.substring(0, currentNorm.lastIndexOf('/') + 1) + '/' : '';
+              const baseUrl = window.location.origin + '/doc/' + currentDir;
+              const resolvedUrl = new URL(href, baseUrl);
+              if (resolvedUrl.pathname.startsWith('/doc/')) {
+                targetPath = resolvedUrl.pathname.replace('/doc/', '');
+              } else if (resolvedUrl.searchParams.has('path')) {
+                targetPath = resolvedUrl.searchParams.get('path');
+              }
+            } else if (href.startsWith('/')) {
+              // 绝对路径，可能是 /doc/xxx 或 /doc?path=xxx
+              if (href.includes('?')) {
+                const url = new URL(href, window.location.origin);
+                targetPath = url.searchParams.get('path') || '';
+              } else {
+                targetPath = href.replace(/^\/doc\//, '').replace(/^\//, '');
+              }
+            }
+          } catch (err) {
+            console.warn('解析链接路径失败:', href, err);
+            return;
+          }
+          
+          if (!targetPath) return;
+          
+          var targetNorm = pathNorm(targetPath);
+          if (targetNorm !== currentNorm && typeof window.navigateToDoc === 'function') {
+            e.preventDefault();
+            var docUrl = link.href || (window.location.origin + (href.indexOf('/') === 0 ? href : '/doc?path=' + encodeURIComponent(targetPath)));
+            window.navigateToDoc(docUrl);
+            return;
+          }
+          
+          var targetLink = Array.from(document.querySelectorAll('.file-link')).find(function(sidebarLink) {
+            var linkPath = pathFromHref(sidebarLink.getAttribute('href') || sidebarLink.href);
+            return pathNorm(linkPath) === targetNorm;
+          });
+          if (!targetLink) return;
+          e.preventDefault();
+          var linkRect = targetLink.getBoundingClientRect();
+          var navRect = treeNav.getBoundingClientRect();
+          var isInViewport = linkRect.top >= navRect.top && linkRect.bottom <= navRect.bottom;
+          if (!isInViewport) {
+            treeNav.scrollTop = targetLink.offsetTop - 10;
+          }
+        });
+      }
+    })();
+  </script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // 实时更新功能
+    (function() {
+      const socket = io();
+      const currentPath = '<%= currentPath %>';
+      const article = document.querySelector('.markdown-body');
+      
+      socket.on('file-changed', function(data) {
+        // 如果是当前查看的文档，直接更新内容
+        if (data.path === currentPath) {
+          console.log('当前文档已更新，正在刷新内容...');
+          article.innerHTML = data.content;
+          if (typeof window.buildDocToc === 'function') window.buildDocToc();
+          if (typeof window.scrollToDocHash === 'function') window.scrollToDocHash();
+          
+          // 重新初始化 Mermaid
+          if (typeof mermaid !== 'undefined') {
+            mermaid.run().then(() => {
+              setupDiagramViewer();
+            });
+          } else {
+            // 如果 Mermaid 未加载，也尝试设置下载按钮（可能已有渲染好的 SVG）
+            setTimeout(() => {
+              setupDiagramViewer();
+            }, 100);
+          }
+          
+          // 显示更新提示
+          showUpdateNotification('文档已自动更新');
+        } else {
+          // 其他文件更新，刷新侧边栏
+          console.log('其他文件已更新:', data.path);
+          location.reload();
+        }
+      });
+      
+      socket.on('file-added', function(data) {
+        console.log('新文件已添加:', data.path);
+        location.reload();
+      });
+      
+      socket.on('file-deleted', function(data) {
+        console.log('文件已删除:', data.path);
+        // 如果删除的是当前文档，跳转到首页
+        if (data.path === currentPath) {
+          showUpdateNotification('当前文档已删除，正在跳转...');
+          setTimeout(() => {
+            location.href = '/';
+          }, 1500);
+        } else {
+          location.reload();
+        }
+      });
+      
+      socket.on('connect', function() {
+        console.log('✅ 已连接到服务器，实时更新已启用');
+      });
+      
+      socket.on('disconnect', function() {
+        console.log('❌ 与服务器断开连接');
+      });
+      
+      // 显示更新通知
+      function showUpdateNotification(message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #4CAF50;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 4px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+          z-index: 10000;
+          font-size: 14px;
+          animation: slideIn 0.3s ease-out;
+        `;
+        notification.textContent = '✨ ' + message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.style.animation = 'slideOut 0.3s ease-out';
+          setTimeout(() => {
+            document.body.removeChild(notification);
+          }, 300);
+        }, 2000);
+      }
+      
+      // 添加动画样式
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideOut {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    })();
+  </script>
+</body>
+</html>
