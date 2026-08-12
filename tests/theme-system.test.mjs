@@ -61,6 +61,13 @@ test('Precision Index gives the compact header extra vertical breathing room', (
   )
 })
 
+test('Swiss Manual keeps document titles within the shared theme scale', () => {
+  assert.match(
+    themeStyles,
+    /body\[data-doc-theme="swiss-manual"\] \.markdown-body h1 \{[\s\S]*?font-size: clamp\(2\.25rem, 4vw, 3\.75rem\);/,
+  )
+})
+
 test('theme bootstrap keeps the page hidden until the stored theme reaches the body', () => {
   assert.match(
     themeStyles,
