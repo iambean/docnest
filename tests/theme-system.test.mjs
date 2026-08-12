@@ -47,6 +47,20 @@ test('Slate Modern is the default theme and migrates the legacy name', () => {
   assert.match(header, />Slate Modern</)
 })
 
+test('mode controls stay available for future use but are hidden in the style popover', () => {
+  assert.match(header, /class="[^"]*theme-mode-section[^"]*"/)
+  assert.match(header, /id="theme-mode-options"/)
+  assert.match(themeStyles, /\.theme-popover \.theme-mode-section\s*\{\s*display: none;/)
+  assert.match(themeScript, /buildModeOptions\(modeOptions\)/)
+})
+
+test('Precision Index gives the compact header extra vertical breathing room', () => {
+  assert.match(
+    themeStyles,
+    /body\[data-doc-theme="precision-index"\] \.header \{[\s\S]*?min-height: 68px;[\s\S]*?padding: 0\.6rem 1rem;/,
+  )
+})
+
 test('every rendered page loads theme tokens after the base styles', async () => {
   for (const view of ['index.ejs', 'doc.ejs', 'dir.ejs', 'not-found.ejs']) {
     const source = await readFile(new URL(`../server/views/${view}`, import.meta.url), 'utf8')
