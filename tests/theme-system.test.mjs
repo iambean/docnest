@@ -61,6 +61,15 @@ test('Precision Index gives the compact header extra vertical breathing room', (
   )
 })
 
+test('theme bootstrap keeps the page hidden until the stored theme reaches the body', () => {
+  assert.match(
+    themeStyles,
+    /html\[data-docnest-theme-pending\] body\s*\{\s*visibility: hidden;/,
+  )
+  assert.match(themeScript, /setAttribute\('data-docnest-theme-pending', ''\)/)
+  assert.match(themeScript, /removeAttribute\('data-docnest-theme-pending'\)/)
+})
+
 test('every rendered page loads theme tokens after the base styles', async () => {
   for (const view of ['index.ejs', 'doc.ejs', 'dir.ejs', 'not-found.ejs']) {
     const source = await readFile(new URL(`../server/views/${view}`, import.meta.url), 'utf8')

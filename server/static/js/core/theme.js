@@ -2,6 +2,10 @@
 (function() {
   'use strict';
 
+  // The theme script is loaded in <head>. Keep the document out of the first
+  // paint until the persisted appearance has been copied onto <body>.
+  document.documentElement.setAttribute('data-docnest-theme-pending', '');
+
   var THEME_PROFILES = {
     'slate-modern': {
       label: 'Slate Modern',
@@ -316,6 +320,7 @@
     }
 
     applyAppearance(activeTheme, activeMode, { persist: false });
+    document.documentElement.removeAttribute('data-docnest-theme-pending');
   }
 
   window.DocNestAppearance = {

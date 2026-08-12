@@ -22,6 +22,11 @@
   --doc-reading-width: 1024px;
 }
 
+/* Hold the first paint until the stored appearance has reached <body>. */
+html[data-docnest-theme-pending] body {
+  visibility: hidden;
+}
+
 html[data-theme="dark"] {
   --doc-surface-raised: #1c1c1e;
   --doc-selection: rgba(165, 180, 252, 0.24);
