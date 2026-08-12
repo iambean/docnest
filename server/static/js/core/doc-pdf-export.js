@@ -488,6 +488,65 @@
     });
   }
 
+  function showPdfExportError(message) {
+    var modalId = 'pdf-export-error';
+    var existing = document.querySelector('.pdf-export-error');
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
+    }
+    if (typeof removeModal === 'function') {
+      removeModal(modalId);
+    }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'pdf-export-modal pdf-export-error';
+    overlay.innerHTML = [
+      '<div class="pdf-export-modal__panel" role="alertdialog" aria-modal="true" aria-labelledby="pdf-export-error-title" aria-describedby="pdf-export-error-desc">',
+        '<div class="pdf-export-modal__title" id="pdf-export-error-title">导出 PDF 失败</div>',
+        '<div class="pdf-export-modal__desc" id="pdf-export-error-desc"></div>',
+        '<div class="pdf-export-modal__actions">',
+          '<button type="button" class="pdf-export-modal__btn pdf-export-modal__btn--primary" data-action="close">知道了</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+
+    var description = overlay.querySelector('#pdf-export-error-desc');
+    if (description) {
+      description.textContent = message || '暂时无法生成 PDF，请稍后重试。';
+    }
+
+    var closed = false;
+    function close() {
+      if (closed) return;
+      closed = true;
+      if (typeof removeModal === 'function') {
+        removeModal(modalId);
+      }
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }
+
+    overlay.addEventListener('click', function(event) {
+      if (event.target === overlay) {
+        close();
+      }
+    });
+
+    var closeButton = overlay.querySelector('[data-action="close"]');
+    if (closeButton) {
+      closeButton.addEventListener('click', close);
+    }
+
+    document.body.appendChild(overlay);
+    if (typeof pushModal === 'function') {
+      pushModal(modalId, close);
+    }
+    if (closeButton) {
+      closeButton.focus();
+    }
+  }
+
   function setButtonLoading(button, loading) {
     if (!button) return;
     if (loading) {
@@ -512,7 +571,7 @@
   function exportCurrentDoc(button, options) {
     var article = document.querySelector('.main-content .markdown-body');
     if (!article) {
-      window.alert('未找到当前文档内容，无法导出 PDF。');
+      showPdfExportError('未找到当前文档内容，无法导出 PDF。');
       return;
     }
 
@@ -552,7 +611,7 @@
       })
       .catch(function(error) {
         console.error('导出 PDF 失败:', error);
-        window.alert('导出 PDF 失败，请稍后重试。');
+        showPdfExportError('暂时无法生成 PDF，请稍后重试。');
       })
       .finally(function() {
         setButtonLoading(button, false);

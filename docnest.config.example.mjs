@@ -12,6 +12,19 @@ export default defineConfig({
   navigation: {
     rootDirectoryOrder: [],
   },
+  appearance: {
+    // slate-modern | editorial-atlas | precision-index | archive-room | swiss-manual
+    defaultTheme: 'slate-modern',
+    // auto | light | dark
+    defaultMode: 'auto',
+    enabledThemes: [
+      'slate-modern',
+      'editorial-atlas',
+      'precision-index',
+      'archive-room',
+      'swiss-manual',
+    ],
+  },
   server: {
     host: '127.0.0.1',
     port: 3000,

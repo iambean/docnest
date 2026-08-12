@@ -59,6 +59,9 @@ function exposeConfig(config: ResolvedDocNestConfig): void {
   process.env.DOCS_LOGO = config.site.logo;
   process.env.DOCS_STORAGE_KEY_PREFIX = config.site.storageKeyPrefix;
   process.env.DOCS_ROOT_DIRECTORY_ORDER = JSON.stringify(config.navigation.rootDirectoryOrder);
+  process.env.DOCS_THEME_DEFAULT = config.appearance.defaultTheme;
+  process.env.DOCS_THEME_MODE_DEFAULT = config.appearance.defaultMode;
+  process.env.DOCS_THEME_ENABLED = JSON.stringify(config.appearance.enabledThemes);
   process.env.DOCS_WATERMARK_ENABLED = String(config.export.watermark.enabled);
   process.env.DOCS_WATERMARK_TEXT = config.export.watermark.text;
   process.env.DOCS_HOST = config.server.host;

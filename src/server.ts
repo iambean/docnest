@@ -27,6 +27,26 @@ const DOCS_TITLE = process.env.DOCS_TITLE || 'DocNest';
 const DOCS_SUBTITLE = process.env.DOCS_SUBTITLE || '本地 Markdown 文档服务';
 const DOCS_LOGO = process.env.DOCS_LOGO || '';
 const DOCS_STORAGE_KEY_PREFIX = process.env.DOCS_STORAGE_KEY_PREFIX || 'docnest';
+const DOCS_THEME_NAMES = ['slate-modern', 'editorial-atlas', 'precision-index', 'archive-room', 'swiss-manual'];
+function normalizeThemeName(value) {
+  return value === 'current-docs' ? 'slate-modern' : value;
+}
+const configuredThemeDefault = normalizeThemeName(process.env.DOCS_THEME_DEFAULT || 'slate-modern');
+const DOCS_THEME_DEFAULT = DOCS_THEME_NAMES.includes(configuredThemeDefault)
+  ? configuredThemeDefault
+  : 'slate-modern';
+const DOCS_THEME_MODE_DEFAULT = process.env.DOCS_THEME_MODE_DEFAULT || 'auto';
+const DOCS_THEME_ENABLED = (() => {
+  try {
+    const parsed = JSON.parse(process.env.DOCS_THEME_ENABLED || '[]');
+    const normalized = Array.isArray(parsed)
+      ? [...new Set(parsed.map(normalizeThemeName).filter((item) => DOCS_THEME_NAMES.includes(item)))]
+      : [];
+    return normalized.length > 0 ? normalized : [...DOCS_THEME_NAMES];
+  } catch {
+    return [...DOCS_THEME_NAMES];
+  }
+})();
 const DOCS_WATERMARK_ENABLED = process.env.DOCS_WATERMARK_ENABLED === 'true';
 const DOCS_WATERMARK_TEXT = process.env.DOCS_WATERMARK_TEXT || DOCS_TITLE;
 const DOCS_DIR = path.resolve(process.env.DOCS_ROOT || path.join(process.cwd(), 'docs'));
@@ -67,6 +87,9 @@ app.locals.docsTitle = DOCS_TITLE;
 app.locals.docsSubtitle = DOCS_SUBTITLE;
 app.locals.docsLogo = DOCS_LOGO;
 app.locals.docsStorageKeyPrefix = DOCS_STORAGE_KEY_PREFIX;
+app.locals.docsThemeDefault = DOCS_THEME_DEFAULT;
+app.locals.docsThemeModeDefault = DOCS_THEME_MODE_DEFAULT;
+app.locals.docsThemeEnabled = DOCS_THEME_ENABLED;
 app.locals.docsWatermarkEnabled = DOCS_WATERMARK_ENABLED;
 app.locals.docsWatermarkText = DOCS_WATERMARK_TEXT;
 
@@ -356,7 +379,7 @@ function renderTree(tree, level = 0) {
       html += `<li class="directory collapsed"${dataDirPath}>
         <span class="dir-toggle">
           <span class="toggle-icon">▼</span>
-          <span class="dir-name" title="${itemName}">📁 ${itemName}</span>
+          <span class="dir-name" title="${itemName}"><span class="tree-kind-icon tree-kind-icon-directory" aria-hidden="true">📁</span>${itemName}</span>
         </span>
         <div class="dir-children">${renderTree(item.children, level + 1)}</div>
       </li>`;
@@ -364,7 +387,7 @@ function renderTree(tree, level = 0) {
       // 文件路径直接使用，路径重定向在 resolveDocPath 中处理
       const url = `/doc?path=${encodeURIComponent(item.path)}`;
       html += `<li class="file">
-        <a href="${url}" class="file-link" title="${itemName}">📄 ${itemName}</a>
+        <a href="${url}" class="file-link" title="${itemName}"><span class="tree-kind-icon tree-kind-icon-file" aria-hidden="true">📄</span>${itemName}</a>
       </li>`;
     }
   }

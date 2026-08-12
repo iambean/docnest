@@ -7,7 +7,7 @@ DocNest 是一个可复用的本地 Markdown 文档中心。文档内容归使�
 在项目根目录执行：
 
 ```bash
-npm install docnest@0.1.0
+npm install docnest
 ```
 
 项目默认读取 `docs/`，可直接启动：
@@ -21,6 +21,40 @@ npx docnest serve
 ## 配置
 
 复制 `docnest.config.example.mjs` 为项目根目录的 `docnest.config.mjs`，配置项目自己的标题、目录顺序、存储键前缀和 PDF 水印。
+
+### 外观主题
+
+DocNest 内置五套独立主题，主题风格与明暗模式分别选择、分别持久化：
+
+- `slate-modern`：中性灰阶与克制强调色构成的现代文档风格，也是默认主题
+- `editorial-atlas`：强调长文阅读与技术出版秩序
+- `precision-index`：高信息密度的工程索引
+- `archive-room`：带有档案与阅览室气质的纸张风格
+- `swiss-manual`：黑白网格与信号色构成的工程手册
+
+页面右上角可以选择主题风格；相邻的明暗模式按钮在 `auto → light → dark` 之间循环。偏好使用 `site.storageKeyPrefix` 隔离，因此同一域名下的多个 DocNest 实例不会互相覆盖。
+
+宿主项目可以设置默认外观，并限制用户可选主题：
+
+```js
+import { defineConfig } from 'docnest/config'
+
+export default defineConfig({
+  appearance: {
+    defaultTheme: 'editorial-atlas',
+    defaultMode: 'auto',
+    enabledThemes: [
+      'slate-modern',
+      'editorial-atlas',
+      'precision-index',
+      'archive-room',
+      'swiss-manual',
+    ],
+  },
+})
+```
+
+未配置 `appearance` 时使用 `slate-modern + auto`。旧配置中的 `current-docs` 会自动迁移到 `slate-modern`，正文视觉不会发生变化；旧版保存的 `markdown-theme` 明暗偏好也会自动迁移到新的项目级存储键。
 
 水印默认关闭。开启后，PDF 导出弹窗会读取配置文字，并允许本次导出临时修改；临时修改不会写回文件或浏览器存储。
 

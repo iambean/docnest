@@ -8,13 +8,9 @@
   <link id="markdown-theme" rel="stylesheet" href="/vendor/github-markdown-css/github-markdown-light.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/static/css/highlight.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/themes.css?v=<%= assetVersion %>">
   <script src="/mermaid/mermaid.min.js?v=<%= assetVersion %>"></script>
-  <script>
-    window.DOCNEST_CONFIG = {
-      watermarkEnabled: <%= docsWatermarkEnabled ? 'true' : 'false' %>,
-      watermarkText: <%- JSON.stringify(docsWatermarkText) %>
-    };
-  </script>
+  <%- include('partials/appearance-head') %>
   <!-- 基础功能模块 -->
   <script src="/static/js/core/theme.js?v=<%= assetVersion %>"></script>
   <script src="/static/js/core/mermaid-init.js?v=<%= assetVersion %>"></script>

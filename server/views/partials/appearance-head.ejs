@@ -1,0 +1,12 @@
+<script>
+  window.DOCNEST_CONFIG = {
+    watermarkEnabled: <%= docsWatermarkEnabled ? 'true' : 'false' %>,
+    watermarkText: <%- JSON.stringify(docsWatermarkText) %>,
+    storageKeyPrefix: <%- JSON.stringify(docsStorageKeyPrefix) %>,
+    appearance: {
+      defaultTheme: <%- JSON.stringify(docsThemeDefault) %>,
+      defaultMode: <%- JSON.stringify(docsThemeModeDefault) %>,
+      enabledThemes: <%- JSON.stringify(docsThemeEnabled) %>
+    }
+  };
+</script>
