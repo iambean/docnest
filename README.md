@@ -90,6 +90,7 @@ startServer(3000)
 `collectDocumentAttachmentPaths` 和 `copyDocumentAttachments`。它们只复制
 Markdown 或 HTML 中明确引用的本地附件，不按文件扩展名设置业务白名单；外链、文档链接、隐藏路径、路径穿越和代码块中的伪引用会被忽略，缺失的附件默认会让构建失败。
 常见凭据文件（如 `.env`、私钥和证书容器）属于公共安全阻断项，即使被误写进文档链接也不会进入静态产物。
+静态生成 HTML 时，可再调用 `rewriteDocumentAttachmentUrls`，将正文中的附件链接统一改写到 `/doc-asset/` 端点。
 
 ## 开发
 

@@ -32,6 +32,11 @@ export type DocumentAttachmentOptions = {
   failOnMissing?: boolean;
 };
 
+export type DocumentAttachmentUrlOptions = {
+  assetPaths?: readonly string[];
+  assetPrefix?: string;
+};
+
 function collectMarkdownPaths(root: string, base = ''): string[] {
   const results: string[] = [];
   for (const entry of fs.readdirSync(path.join(root, base), { withFileTypes: true })) {
@@ -173,4 +178,43 @@ export function copyDocumentAttachments(
   }
 
   return attachmentPaths;
+}
+
+function encodeAssetPath(assetPath: string): string {
+  return assetPath.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+}
+
+/** Rewrite rendered local attachment links to the static document asset endpoint. */
+export function rewriteDocumentAttachmentUrls(
+  html: string,
+  documentPath: string,
+  options: DocumentAttachmentUrlOptions = {},
+): string {
+  const assetPrefix = (options.assetPrefix || '/doc-asset').replace(/\/+$/, '');
+  const assetPaths = options.assetPaths ? new Set(options.assetPaths) : null;
+  const documentDir = path.posix.dirname(documentPath.replace(/\\/g, '/'));
+  const attributePattern = /(<(?:a|audio|embed|iframe|img|object|source|video)\b[^>]*\s(?:href|src)=["'])([^"']+)(["'])/gi;
+
+  return html.replace(attributePattern, (match, prefix: string, rawTarget: string, suffix: string) => {
+    if (!rawTarget || /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\/|data:)/i.test(rawTarget)) return match;
+
+    const targetWithoutSuffix = stripTargetSuffix(rawTarget);
+    let decodedTarget: string;
+    try {
+      decodedTarget = decodeURIComponent(targetWithoutSuffix);
+    } catch {
+      return match;
+    }
+    if (!decodedTarget || MARKDOWN_SOURCE_EXTENSIONS.has(path.extname(decodedTarget).toLowerCase())) {
+      return match;
+    }
+
+    const resolved = path.posix.normalize(path.posix.join(documentDir, decodedTarget));
+    if (!resolved || resolved === '..' || resolved.startsWith('../') || resolved.startsWith('.')) return match;
+    if (assetPaths && !assetPaths.has(resolved)) return match;
+
+    const suffixStart = targetWithoutSuffix.length;
+    const queryAndHash = rawTarget.slice(suffixStart);
+    return `${prefix}${assetPrefix}/${encodeAssetPath(resolved)}${queryAndHash}${suffix}`;
+  });
 }

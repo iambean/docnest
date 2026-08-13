@@ -1,6 +1,6 @@
 {
   "name": "docnest",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "可复用的本地 Markdown 文档中心",
   "repository": {
     "type": "git",

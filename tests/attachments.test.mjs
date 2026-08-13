@@ -13,6 +13,7 @@ import test from 'node:test'
 import {
   collectDocumentAttachmentPaths,
   copyDocumentAttachments,
+  rewriteDocumentAttachmentUrls,
 } from '../dist/attachments.js'
 
 test('collects referenced local attachments without an extension allowlist', () => {
@@ -101,4 +102,27 @@ test('skips missing document links and paths outside the document root', () => {
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('rewrites only collected local attachment URLs for static output', () => {
+  const html = [
+    '<a href="./audit.sql?download=1">SQL</a>',
+    '<img src="./diagram.svg#top">',
+    '<a href="./appendix.md">Document</a>',
+    '<a href="https://example.com/file.zip">External</a>',
+    '<img src="/static/img/docs/image.png">',
+  ].join('')
+
+  assert.equal(
+    rewriteDocumentAttachmentUrls(html, 'guide/report.md', {
+      assetPaths: ['guide/audit.sql', 'guide/diagram.svg'],
+    }),
+    [
+      '<a href="/doc-asset/guide/audit.sql?download=1">SQL</a>',
+      '<img src="/doc-asset/guide/diagram.svg#top">',
+      '<a href="./appendix.md">Document</a>',
+      '<a href="https://example.com/file.zip">External</a>',
+      '<img src="/static/img/docs/image.png">',
+    ].join(''),
+  )
 })
