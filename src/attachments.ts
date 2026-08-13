@@ -104,6 +104,7 @@ function resolveAttachmentPath(
     return null;
   }
   if (!decodedTarget) return null;
+  if (decodedTarget.endsWith('/')) return null;
 
   const extension = path.extname(decodedTarget).toLowerCase();
   if (MARKDOWN_SOURCE_EXTENSIONS.has(extension)) return null;
