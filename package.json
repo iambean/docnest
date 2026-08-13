@@ -1,6 +1,6 @@
 {
   "name": "docnest",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "可复用的本地 Markdown 文档中心",
   "repository": {
     "type": "git",
@@ -16,6 +16,7 @@
   },
   "exports": {
     "./config": "./dist/config.js",
+    "./attachments": "./dist/attachments.js",
     "./server": "./dist/server.js",
     ".": "./dist/config.js"
   },

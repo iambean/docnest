@@ -84,6 +84,12 @@ startServer(3000)
 
 存储适配器实现 `name`、`readDir`、`fileExists`、`readFile`、`readAsset`，可选实现 `ready`；这样文档内容仍由宿主项目提供，DocNest 只负责展示和交互。
 
+## 静态构建中的文档附件
+
+如果宿主项目需要生成静态站点，可使用 `docnest/attachments` 提供的
+`collectDocumentAttachmentPaths` 和 `copyDocumentAttachments`。它们只复制
+Markdown 或 HTML 中明确引用的本地附件，不按文件扩展名设置业务白名单；外链、文档链接、隐藏路径、路径穿越和代码块中的伪引用会被忽略，缺失的附件默认会让构建失败。
+
 ## 开发
 
 ```bash
