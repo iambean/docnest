@@ -33,6 +33,7 @@ test('collects referenced local attachments without an extension allowlist', () 
       '[archive]: <./archive.zip> "download"',
       '[external](https://example.com/file.zip)',
       '[document](./appendix.md)',
+      '[credentials](./local.env)',
       '```md',
       '[not-an-asset](./ignored.zip)',
       '```',
@@ -43,6 +44,7 @@ test('collects referenced local attachments without an extension allowlist', () 
     writeFileSync(path.join(docs, 'guide', 'image.webp'), 'binary\n')
     writeFileSync(path.join(docs, 'guide', 'archive.zip'), 'binary\n')
     writeFileSync(path.join(docs, 'guide', 'ignored.zip'), 'binary\n')
+    writeFileSync(path.join(docs, 'guide', 'local.env'), 'SECRET=value\n')
     writeFileSync(path.join(docs, '.private', 'secret.txt'), 'secret\n')
 
     assert.deepEqual(collectDocumentAttachmentPaths(docs), [

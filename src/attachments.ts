@@ -2,6 +2,23 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const MARKDOWN_SOURCE_EXTENSIONS = new Set(['.md', '.markdown']);
+const SENSITIVE_ATTACHMENT_EXTENSIONS = new Set([
+  '.env',
+  '.pem',
+  '.key',
+  '.p12',
+  '.pfx',
+  '.jks',
+  '.keystore',
+  '.secret',
+  '.secrets',
+]);
+const SENSITIVE_ATTACHMENT_NAMES = new Set([
+  'id_rsa',
+  'id_dsa',
+  'id_ecdsa',
+  'id_ed25519',
+]);
 const MARKDOWN_LINK_PATTERN = /!?\[[^\]]*\]\(\s*(?:<([^>\n]+)>|([^\s)]+))(?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\)/g;
 const MARKDOWN_REFERENCE_PATTERN = /^\s{0,3}\[[^\]]+\]:\s*(?:<([^>\n]+)>|(\S+))/gm;
 const HTML_ASSET_PATTERN = /\b(?:src|href)=["']([^"']+)["']/gi;
@@ -35,6 +52,13 @@ function isLocalRelativeTarget(target: string): boolean {
 
 function stripTargetSuffix(target: string): string {
   return target.split(/[?#]/, 1)[0];
+}
+
+function isSensitiveAttachment(target: string): boolean {
+  const baseName = path.basename(target).toLowerCase();
+  return SENSITIVE_ATTACHMENT_EXTENSIONS.has(path.extname(baseName))
+    || SENSITIVE_ATTACHMENT_NAMES.has(baseName)
+    || baseName.startsWith('.env.');
 }
 
 function extractTargets(markdown: string): string[] {
@@ -78,6 +102,7 @@ function resolveAttachmentPath(
 
   const extension = path.extname(decodedTarget).toLowerCase();
   if (MARKDOWN_SOURCE_EXTENSIONS.has(extension)) return null;
+  if (isSensitiveAttachment(decodedTarget)) return null;
 
   const resolved = path.resolve(docsRoot, path.dirname(markdownPath), decodedTarget);
   const relative = path.relative(docsRoot, resolved);
