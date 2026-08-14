@@ -91,12 +91,21 @@ test('configured single-passphrase auth protects documents and supports runtime 
   assert.equal(loginPage.status, 200)
   assert.match(await loginPage.text(), /授权口令/)
 
-  const login = await request(port, '/auth/login', {
+  const wrongVerify = await request(port, '/auth/verify', {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ passphrase: '旧口令', next: '/' }),
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ passphrase: '错误口令' }),
   })
-  assert.equal(login.status, 302)
+  assert.equal(wrongVerify.status, 401)
+  assert.deepEqual(await wrongVerify.json(), { ok: false, error: '口令不正确，请重试。' })
+
+  const login = await request(port, '/auth/verify', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({ passphrase: '旧口令' }),
+  })
+  assert.equal(login.status, 200)
+  assert.deepEqual(await login.json(), { ok: true })
   const oldCookie = sessionCookie(login)
   assert.match(oldCookie, /^docnest_session=/)
 

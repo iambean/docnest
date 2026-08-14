@@ -5762,6 +5762,22 @@ body[data-theme="dark"] .dir-listing-count {
 }
 
 /* 极简单口令授权 */
+html.docnest-auth-pending body > * {
+  visibility: hidden;
+}
+
+html.docnest-auth-pending::before {
+  content: '正在校验授权…';
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  color: var(--linear-text-muted, #63727f);
+  background: var(--linear-bg, #ffffff);
+  font-size: 0.9rem;
+}
+
 .auth-actions {
   display: inline-flex;
   align-items: center;

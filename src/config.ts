@@ -45,6 +45,7 @@ export type DocNestConfig = {
     enabled?: boolean;
     passphrase?: string;
     stateFile?: string;
+    localStorageKey?: string;
     sessionTtlMinutes?: number;
   };
   export?: {
@@ -70,6 +71,7 @@ export type ResolvedDocNestConfig = Required<DocNestConfig> & {
     enabled: boolean;
     passphrase: string;
     stateFile: string;
+    localStorageKey: string;
     sessionTtlMinutes: number;
   };
   export: {
@@ -152,6 +154,8 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
   const auth = userConfig.auth ?? {};
   const watermark = userConfig.export?.watermark ?? {};
   const storageKeyPrefix = site.storageKeyPrefix?.trim() || `docnest:${projectName}`;
+  const authLocalStorageKey =
+    auth.localStorageKey?.trim() || `${storageKeyPrefix}:auth-passphrase`;
 
   return {
     projectRoot,
@@ -178,6 +182,7 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
       enabled: auth.enabled ?? false,
       passphrase: typeof auth.passphrase === 'string' ? auth.passphrase : '',
       stateFile: path.resolve(projectRoot, auth.stateFile?.trim() || '.docnest/auth.json'),
+      localStorageKey: authLocalStorageKey,
       sessionTtlMinutes: normalizePositiveNumber(auth.sessionTtlMinutes, 24 * 60),
     },
     export: {

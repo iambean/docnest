@@ -7,6 +7,12 @@
   <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" sizes="any">
   <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
   <link rel="stylesheet" href="/static/css/themes.css?v=<%= assetVersion %>">
+  <script>
+    window.DOCNEST_CONFIG = {
+      authEnabled: true,
+      authStorageKey: <%- JSON.stringify(docsAuthStorageKey) %>
+    };
+  </script>
 </head>
 <body class="auth-page">
   <main class="auth-login-card" aria-labelledby="auth-login-title">
@@ -30,12 +36,11 @@
         授权口令
         <input type="password" name="passphrase" autocomplete="current-password" autofocus required>
       </label>
-      <% if (error) { %>
-        <p class="auth-form-error" role="alert"><%= error %></p>
-      <% } %>
+      <p class="auth-form-error" role="alert" id="auth-login-error" <%= error ? '' : 'hidden' %>><%= error %></p>
       <button type="submit" class="auth-primary-btn">进入文档中心</button>
     </form>
     <p class="auth-login-note">没有账号体系，也没有角色区分；口令是唯一的入口。</p>
   </main>
+  <script src="/static/js/core/auth.js?v=<%= assetVersion %>"></script>
 </body>
 </html>

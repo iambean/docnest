@@ -1,5 +1,7 @@
 <script>
   window.DOCNEST_CONFIG = {
+    authEnabled: <%= docsAuthEnabled ? 'true' : 'false' %>,
+    authStorageKey: <%- JSON.stringify(docsAuthStorageKey) %>,
     watermarkEnabled: <%= docsWatermarkEnabled ? 'true' : 'false' %>,
     watermarkText: <%- JSON.stringify(docsWatermarkText) %>,
     storageKeyPrefix: <%- JSON.stringify(docsStorageKeyPrefix) %>,
@@ -9,4 +11,7 @@
       enabledThemes: <%- JSON.stringify(docsThemeEnabled) %>
     }
   };
+  if (window.DOCNEST_CONFIG.authEnabled) {
+    document.documentElement.classList.add('docnest-auth-pending');
+  }
 </script>

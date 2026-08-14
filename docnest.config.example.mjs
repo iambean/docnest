@@ -37,6 +37,8 @@ export default defineConfig({
     // 仅首次启动且授权状态文件不存在时使用，之后可在页面内修改。
     passphrase: '',
     stateFile: '.docnest/auth.json',
+    // 前端 localStorage 的键；口令会永久保存在浏览器本地，直到用户退出或修改口令。
+    localStorageKey: 'my-project:auth-passphrase',
     sessionTtlMinutes: 24 * 60,
   },
   export: {

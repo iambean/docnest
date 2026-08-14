@@ -83,6 +83,7 @@ const AUTH_CONFIG = globalThis.__DOCNEST_AUTH_CONFIG__ || {
   enabled: false,
   passphrase: '',
   stateFile: path.join(process.cwd(), '.docnest', 'auth.json'),
+  localStorageKey: `${DOCS_STORAGE_KEY_PREFIX}:auth-passphrase`,
   sessionTtlMinutes: 24 * 60,
 };
 const AUTH_MANAGER = createAuthManager(AUTH_CONFIG);
@@ -102,6 +103,7 @@ app.locals.docsThemeEnabled = DOCS_THEME_ENABLED;
 app.locals.docsWatermarkEnabled = DOCS_WATERMARK_ENABLED;
 app.locals.docsWatermarkText = DOCS_WATERMARK_TEXT;
 app.locals.docsAuthEnabled = BUILT_IN_AUTH_ENABLED;
+app.locals.docsAuthStorageKey = AUTH_CONFIG.localStorageKey || `${DOCS_STORAGE_KEY_PREFIX}:auth-passphrase`;
 
 function normalizeDocRelativePath(value) {
   const raw = String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
@@ -304,13 +306,21 @@ function renderLoginPage(res, nextPath, error, status = 200) {
 
 app.get('/login', (req, res) => {
   if (!BUILT_IN_AUTH_ENABLED) return res.redirect('/');
-  if (AUTH_MANAGER.authenticateSession(readAuthToken(req))) {
-    return res.redirect(safeNextPath(req.query.next));
-  }
   const message = req.query.changed
     ? '口令已更新，请使用新口令重新进入。'
     : '';
   return renderLoginPage(res, req.query.next, message);
+});
+
+app.post('/auth/verify', (req, res) => {
+  if (!BUILT_IN_AUTH_ENABLED) return res.json({ ok: true });
+  const token = AUTH_MANAGER.createSession(String(req.body?.passphrase || ''));
+  if (!token) {
+    clearAuthCookie(res);
+    return res.status(401).json({ ok: false, error: '口令不正确，请重试。' });
+  }
+  setAuthCookie(res, token);
+  return res.json({ ok: true });
 });
 
 app.post('/auth/login', (req, res) => {

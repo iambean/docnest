@@ -16,6 +16,7 @@ const authScript = await readFile(
 test('single-passphrase authorization protects documents while leaving health checks public', () => {
   assert.match(server, /app\.use\(documentAuthMiddleware\)/)
   assert.match(server, /req\.path === '\/health' \|\| req\.path === '\/ready'/)
+  assert.match(server, /app\.post\('\/auth\/verify'/)
   assert.match(server, /app\.post\('\/auth\/login'/)
   assert.match(server, /app\.post\('\/auth\/change-password'/)
   assert.match(server, /io\.use\(\(socket, next\) =>/)
@@ -28,11 +29,16 @@ test('authenticated pages expose change-password and logout controls without rol
   assert.match(header, /id="auth-change-password-form"/)
   assert.doesNotMatch(header, /name="(?:username|role|account)"/i)
   assert.match(authScript, /\/auth\/change-password/)
+  assert.match(authScript, /\/auth\/verify/)
+  assert.match(authScript, /localStorage\.setItem/)
+  assert.match(authScript, /localStorage\.removeItem/)
+  assert.match(authScript, /docNestEnsureAuthorized/)
 })
 
 test('login page accepts only one passphrase and preserves a safe next path', () => {
   assert.match(login, /action="\/auth\/login" method="post"/)
   assert.match(login, /name="passphrase"/)
   assert.match(login, /name="next"/)
+  assert.match(login, /core\/auth\.js/)
   assert.doesNotMatch(login, /name="(?:username|role|account|email)"/i)
 })

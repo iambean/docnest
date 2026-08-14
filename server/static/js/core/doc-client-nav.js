@@ -155,7 +155,24 @@
     article.style.opacity = '0.6';
     article.style.pointerEvents = 'none';
 
-    fetch(absoluteUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    var authCheck = typeof window.docNestEnsureAuthorized === 'function'
+      ? window.docNestEnsureAuthorized()
+      : Promise.resolve(true);
+
+    authCheck.then(function(authorized) {
+      if (!authorized) {
+        if (typeof window.docNestRedirectToLogin === 'function') {
+          window.docNestRedirectToLogin();
+        }
+        var redirectError = new Error('AUTH_REDIRECT');
+        redirectError.redirected = true;
+        throw redirectError;
+      }
+      return fetch(absoluteUrl, {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+    })
       .then(function(res) {
         if (!res.ok) {
           throw new Error('HTTP ' + res.status);
@@ -198,6 +215,7 @@
         }
       })
       .catch(function(err) {
+        if (err && err.redirected) return;
         showNavError('文档加载失败，请稍后重试');
         console.warn('SPA 加载失败，保持当前页面:', err);
       })
