@@ -5778,43 +5778,6 @@ html.docnest-auth-pending::before {
   font-size: 0.9rem;
 }
 
-.auth-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.auth-logout-form {
-  display: inline-flex;
-  margin: 0;
-}
-
-.auth-change-password-btn,
-.auth-logout-btn {
-  white-space: nowrap;
-}
-
-.auth-modal[hidden] {
-  display: none;
-}
-
-.auth-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: grid;
-  place-items: center;
-  padding: 1.25rem;
-}
-
-.auth-modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 16, 24, 0.42);
-  backdrop-filter: blur(4px);
-}
-
-.auth-modal-card,
 .auth-login-card {
   position: relative;
   z-index: 1;
@@ -5825,25 +5788,11 @@ html.docnest-auth-pending::before {
   box-shadow: 0 24px 70px rgba(17, 29, 40, 0.2);
 }
 
-.auth-modal-card {
-  width: min(100%, 440px);
-  padding: 1.5rem;
-}
-
-.auth-modal-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.auth-modal-header h2,
 .auth-login-card h1 {
   margin: 0;
   color: var(--linear-text, #18212a);
 }
 
-.auth-modal-eyebrow,
 .auth-login-eyebrow {
   margin: 0 0 0.35rem;
   color: var(--linear-accent, #267c83);
@@ -5852,33 +5801,10 @@ html.docnest-auth-pending::before {
   letter-spacing: 0.12em;
 }
 
-.auth-modal-close {
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  color: var(--linear-text-muted, #63727f);
-  background: transparent;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.auth-modal-close:hover {
-  background: var(--linear-bg-subtle, #eef2f5);
-}
-
-.auth-modal-help,
 .auth-login-description,
 .auth-login-note {
   color: var(--linear-text-muted, #63727f);
   line-height: 1.6;
-}
-
-.auth-modal-help {
-  margin: 1rem 0 1.25rem;
-  font-size: 0.875rem;
 }
 
 .auth-form {
@@ -5920,15 +5846,7 @@ html.docnest-auth-pending::before {
   font-size: 0.875rem;
 }
 
-.auth-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  margin-top: 0.25rem;
-}
-
-.auth-primary-btn,
-.auth-secondary-btn {
+.auth-primary-btn {
   min-height: 2.5rem;
   padding: 0.55rem 0.95rem;
   border-radius: 8px;
@@ -5941,12 +5859,6 @@ html.docnest-auth-pending::before {
   border: 1px solid var(--linear-accent, #267c83);
   color: #fff;
   background: var(--linear-accent, #267c83);
-}
-
-.auth-secondary-btn {
-  border: 1px solid var(--linear-border, #d7dee5);
-  color: var(--linear-text, #18212a);
-  background: var(--linear-bg-subtle, #eef2f5);
 }
 
 .auth-page {
@@ -6009,17 +5921,4 @@ html.docnest-auth-pending::before {
   margin: 1rem 0 0;
   font-size: 0.75rem;
   text-align: center;
-}
-
-@media (max-width: 768px) {
-  .auth-actions {
-    gap: 0.25rem;
-  }
-
-  .auth-change-password-btn,
-  .auth-logout-btn {
-    min-width: 44px;
-    padding-inline: 0.5rem;
-    font-size: 0.75rem;
-  }
 }

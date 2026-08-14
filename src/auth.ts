@@ -30,8 +30,6 @@ export type DocNestAuthManager = {
   verifyPassphrase: (passphrase: string) => boolean
   createSession: (passphrase: string) => string | null
   authenticateSession: (token: string | undefined) => boolean
-  revokeSession: (token: string | undefined) => void
-  changePassphrase: (currentPassphrase: string, nextPassphrase: string) => boolean
 }
 
 type Session = {
@@ -168,12 +166,10 @@ export function createAuthManager(config: DocNestAuthConfig): DocNestAuthManager
       verifyPassphrase: () => true,
       createSession: () => null,
       authenticateSession: () => true,
-      revokeSession: () => undefined,
-      changePassphrase: () => false,
     }
   }
 
-  let state = readOrCreateState(config)
+  const state = readOrCreateState(config)
 
   function verifyPassphrase(passphrase: string): boolean {
     return matchesHash(passphrase, state)
@@ -203,19 +199,6 @@ export function createAuthManager(config: DocNestAuthConfig): DocNestAuthManager
     return true
   }
 
-  function revokeSession(token: string | undefined): void {
-    if (token) sessions.delete(token)
-  }
-
-  function changePassphrase(currentPassphrase: string, nextPassphrase: string): boolean {
-    if (!verifyPassphrase(currentPassphrase)) return false
-    assertPassphrase(nextPassphrase, '新授权口令')
-    state = createState(nextPassphrase)
-    writeState(config.stateFile, state)
-    sessions.clear()
-    return true
-  }
-
   return {
     enabled,
     stateFile: config.stateFile,
@@ -224,7 +207,5 @@ export function createAuthManager(config: DocNestAuthConfig): DocNestAuthManager
     verifyPassphrase,
     createSession,
     authenticateSession,
-    revokeSession,
-    changePassphrase,
   }
 }

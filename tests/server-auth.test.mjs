@@ -50,7 +50,7 @@ async function request(port, requestPath, init = {}) {
   })
 }
 
-test('configured single-passphrase auth protects documents and supports runtime rotation', async (t) => {
+test('configured single-passphrase auth protects documents and verifies every entry', async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-server-auth-'))
   await writeFile(path.join(root, 'package.json'), JSON.stringify({ name: 'auth-fixture' }))
   await writeFile(path.join(root, 'docnest.config.mjs'), `export default {
@@ -113,37 +113,25 @@ test('configured single-passphrase auth protects documents and supports runtime 
   assert.equal(authorizedHome.status, 200)
   assert.match(await authorizedHome.text(), /欢迎使用文档中心/)
 
-  const changed = await request(port, '/auth/change-password', {
+  const removedChangeRoute = await request(port, '/auth/change-password', {
     method: 'POST',
     headers: { 'content-type': 'application/json', cookie: oldCookie },
     body: JSON.stringify({ currentPassphrase: '旧口令', nextPassphrase: '新口令' }),
   })
-  assert.equal(changed.status, 200)
-  assert.deepEqual(await changed.json(), { ok: true })
+  assert.equal(removedChangeRoute.status, 404)
 
-  const oldSession = await request(port, '/', { headers: { cookie: oldCookie } })
-  assert.equal(oldSession.status, 302)
-
-  const oldLogin = await request(port, '/auth/login', {
+  const removedLogoutRoute = await request(port, '/auth/logout', {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ passphrase: '旧口令', next: '/' }),
+    headers: { cookie: oldCookie },
   })
-  assert.equal(oldLogin.status, 401)
+  assert.equal(removedLogoutRoute.status, 404)
 
-  const newLogin = await request(port, '/auth/login', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ passphrase: '新口令', next: '/' }),
-  })
-  assert.equal(newLogin.status, 302)
-  const newCookie = sessionCookie(newLogin)
   const authorizedDoc = await request(port, '/doc?path=README.md', {
-    headers: { cookie: newCookie },
+    headers: { cookie: oldCookie },
   })
   assert.equal(authorizedDoc.status, 200)
   assert.match(await authorizedDoc.text(), /受保护文档/)
 
   const state = await readFile(path.join(root, '.docnest', 'auth.json'), 'utf8')
-  assert.doesNotMatch(state, /旧口令|新口令/)
+  assert.doesNotMatch(state, /旧口令/)
 })

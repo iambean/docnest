@@ -18,21 +18,20 @@ test('single-passphrase authorization protects documents while leaving health ch
   assert.match(server, /req\.path === '\/health' \|\| req\.path === '\/ready'/)
   assert.match(server, /app\.post\('\/auth\/verify'/)
   assert.match(server, /app\.post\('\/auth\/login'/)
-  assert.match(server, /app\.post\('\/auth\/change-password'/)
+  assert.doesNotMatch(server, /app\.post\('\/auth\/(?:change-password|logout)'/)
   assert.match(server, /io\.use\(\(socket, next\) =>/)
 })
 
-test('authenticated pages expose change-password and logout controls without role concepts', () => {
+test('authenticated pages expose only the single-passphrase client guard', () => {
   assert.match(header, /docsAuthEnabled/)
-  assert.match(header, /id="auth-change-password-btn"/)
-  assert.match(header, /action="\/auth\/logout" method="post"/)
-  assert.match(header, /id="auth-change-password-form"/)
+  assert.match(header, /core\/auth\.js/)
+  assert.doesNotMatch(header, /(?:修改口令|退出|auth-change-password|auth-logout)/)
   assert.doesNotMatch(header, /name="(?:username|role|account)"/i)
-  assert.match(authScript, /\/auth\/change-password/)
   assert.match(authScript, /\/auth\/verify/)
   assert.match(authScript, /localStorage\.setItem/)
   assert.match(authScript, /localStorage\.removeItem/)
   assert.match(authScript, /docNestEnsureAuthorized/)
+  assert.doesNotMatch(authScript, /(?:change-password|auth-logout-form|修改口令|退出)/)
 })
 
 test('login page accepts only one passphrase and preserves a safe next path', () => {

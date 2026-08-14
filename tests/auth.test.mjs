@@ -47,20 +47,18 @@ test('initial passphrase is hashed and creates an authenticated session', async 
   assert.equal(permissions, 0o600)
 })
 
-test('changing the passphrase persists it and invalidates every existing session', async () => {
-  const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-auth-change-'))
+test('the hashed passphrase remains authoritative after a restart', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-auth-persist-'))
   const stateFile = path.join(root, '.docnest', 'auth.json')
-  const manager = createAuthManager(createConfig(stateFile, '旧口令'))
-  const oldToken = manager.createSession('旧口令')
+  const manager = createAuthManager(createConfig(stateFile, '固定口令'))
+  const token = manager.createSession('固定口令')
 
-  assert.equal(manager.changePassphrase('错误口令', '新口令'), false)
-  assert.equal(manager.changePassphrase('旧口令', '新口令'), true)
-  assert.equal(manager.authenticateSession(oldToken || undefined), false)
-  assert.equal(manager.createSession('旧口令'), null)
+  assert.equal(manager.verifyPassphrase('错误口令'), false)
+  assert.equal(manager.authenticateSession(token || undefined), true)
 
   const restartedManager = createAuthManager(createConfig(stateFile))
-  assert.equal(restartedManager.createSession('旧口令'), null)
-  assert.equal(typeof restartedManager.createSession('新口令'), 'string')
+  assert.equal(restartedManager.createSession('错误口令'), null)
+  assert.equal(typeof restartedManager.createSession('固定口令'), 'string')
 })
 
 test('enabled authorization refuses to start without an initial passphrase or state', async () => {

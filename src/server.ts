@@ -306,10 +306,7 @@ function renderLoginPage(res, nextPath, error, status = 200) {
 
 app.get('/login', (req, res) => {
   if (!BUILT_IN_AUTH_ENABLED) return res.redirect('/');
-  const message = req.query.changed
-    ? '口令已更新，请使用新口令重新进入。'
-    : '';
-  return renderLoginPage(res, req.query.next, message);
+  return renderLoginPage(res, req.query.next, '');
 });
 
 app.post('/auth/verify', (req, res) => {
@@ -330,33 +327,6 @@ app.post('/auth/login', (req, res) => {
   if (!token) return renderLoginPage(res, nextPath, '口令不正确，请重试。', 401);
   setAuthCookie(res, token);
   return res.redirect(nextPath);
-});
-
-app.post('/auth/logout', (req, res) => {
-  AUTH_MANAGER.revokeSession(readAuthToken(req));
-  clearAuthCookie(res);
-  return res.redirect('/login');
-});
-
-app.post('/auth/change-password', (req, res) => {
-  if (!BUILT_IN_AUTH_ENABLED || !AUTH_MANAGER.authenticateSession(readAuthToken(req))) {
-    return res.status(401).json({ ok: false, error: '当前会话未授权。' });
-  }
-
-  try {
-    const changed = AUTH_MANAGER.changePassphrase(
-      String(req.body?.currentPassphrase || ''),
-      String(req.body?.nextPassphrase || ''),
-    );
-    if (!changed) return res.status(401).json({ ok: false, error: '当前口令不正确。' });
-    clearAuthCookie(res);
-    return res.json({ ok: true });
-  } catch (error) {
-    return res.status(400).json({
-      ok: false,
-      error: error instanceof Error ? error.message : '新口令无效。',
-    });
-  }
 });
 
 function documentAuthMiddleware(req, res, next) {

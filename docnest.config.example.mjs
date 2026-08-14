@@ -34,10 +34,10 @@ export default defineConfig({
   auth: {
     // 极简单口令授权；关闭时文档中心保持本地开放。
     enabled: false,
-    // 仅首次启动且授权状态文件不存在时使用，之后可在页面内修改。
+    // 仅首次启动且授权状态文件不存在时使用；更换口令需手动删除状态文件后重启。
     passphrase: '',
     stateFile: '.docnest/auth.json',
-    // 前端 localStorage 的键；口令会永久保存在浏览器本地，直到用户退出或修改口令。
+    // 前端 localStorage 的键；口令会永久保存在浏览器本地，直到手动清除或口令失效。
     localStorageKey: 'my-project:auth-passphrase',
     sessionTtlMinutes: 24 * 60,
   },
