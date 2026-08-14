@@ -14,6 +14,7 @@
   <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
 </head>
 <body class="not-found-page">
+  <%- include('partials/page-protection') %>
   <div class="container">
     <%- include('partials/header', { showBackLink: true }) %>
     <div class="content">

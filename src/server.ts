@@ -48,8 +48,9 @@ const DOCS_THEME_ENABLED = (() => {
     return [...DOCS_THEME_NAMES];
   }
 })();
-const DOCS_WATERMARK_ENABLED = process.env.DOCS_WATERMARK_ENABLED === 'true';
-const DOCS_WATERMARK_TEXT = process.env.DOCS_WATERMARK_TEXT || DOCS_TITLE;
+const DOCS_RESTRICTED_MODE = process.env.DOCS_RESTRICTED_MODE === 'true';
+const DOCS_PDF_ENABLED = !DOCS_RESTRICTED_MODE;
+const DOCS_PAGE_WATERMARK_TEXT = DOCS_TITLE;
 const DOCS_DIR = path.resolve(process.env.DOCS_ROOT || path.join(process.cwd(), 'docs'));
 const ROOT_DIRECTORY_ORDER = (() => {
   try {
@@ -100,8 +101,8 @@ app.locals.docsStorageKeyPrefix = DOCS_STORAGE_KEY_PREFIX;
 app.locals.docsThemeDefault = DOCS_THEME_DEFAULT;
 app.locals.docsThemeModeDefault = DOCS_THEME_MODE_DEFAULT;
 app.locals.docsThemeEnabled = DOCS_THEME_ENABLED;
-app.locals.docsWatermarkEnabled = DOCS_WATERMARK_ENABLED;
-app.locals.docsWatermarkText = DOCS_WATERMARK_TEXT;
+app.locals.docsRestrictedMode = DOCS_RESTRICTED_MODE;
+app.locals.docsPageWatermarkText = DOCS_PAGE_WATERMARK_TEXT;
 app.locals.docsAuthEnabled = BUILT_IN_AUTH_ENABLED;
 app.locals.docsAuthStorageKey = AUTH_CONFIG.localStorageKey || `${DOCS_STORAGE_KEY_PREFIX}:auth-passphrase`;
 
@@ -237,11 +238,13 @@ app.get('/favicon.ico', (req, res) => {
 app.use('/mermaid', express.static(MERMAID_DIR));
 // GitHub Markdown 样式（本地，避免 CDN 慢）
 app.use('/vendor/github-markdown-css', express.static(MARKDOWN_THEME_DIR));
-// html2canvas / DOMPurify / jsPDF（本地，用于前端导出 PDF）
-app.use('/vendor/html2canvas', express.static(HTML2CANVAS_DIR));
-app.use('/vendor/dompurify', express.static(DOMPURIFY_DIR));
-// jsPDF（本地，用于 Mermaid 图导出 PDF）
-app.use('/vendor/jspdf', express.static(JSPDF_DIR));
+if (DOCS_PDF_ENABLED) {
+  // html2canvas / DOMPurify / jsPDF（本地，用于前端导出 PDF）
+  app.use('/vendor/html2canvas', express.static(HTML2CANVAS_DIR));
+  app.use('/vendor/dompurify', express.static(DOMPURIFY_DIR));
+  // jsPDF（本地，用于 Mermaid 图导出 PDF）
+  app.use('/vendor/jspdf', express.static(JSPDF_DIR));
+}
 
 app.use(express.json({ limit: '16kb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
@@ -504,8 +507,11 @@ function renderTree(tree, level = 0) {
     } else {
       // 文件路径直接使用，路径重定向在 resolveDocPath 中处理
       const url = `/doc?path=${encodeURIComponent(item.path)}`;
+      const isReadme = item.name.toLowerCase() === 'readme.md';
+      const readmeClass = isReadme ? ' readme-link' : '';
+      const readmeBadge = isReadme ? '<span class="tree-readme-badge">README</span>' : '';
       html += `<li class="file">
-        <a href="${url}" class="file-link" title="${itemName}"><span class="tree-kind-icon tree-kind-icon-file" aria-hidden="true">📄</span>${itemName}</a>
+        <a href="${url}" class="file-link${readmeClass}" title="${itemName}"><span class="tree-kind-icon tree-kind-icon-file" aria-hidden="true">📄</span><span class="tree-file-name">${itemName}</span>${readmeBadge}</a>
       </li>`;
     }
   }

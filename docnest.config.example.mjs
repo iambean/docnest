@@ -41,10 +41,7 @@ export default defineConfig({
     localStorageKey: 'my-project:auth-passphrase',
     sessionTtlMinutes: 24 * 60,
   },
-  export: {
-    watermark: {
-      enabled: false,
-      text: '我的项目文档',
-    },
-  },
+  // 受限阅读模式；默认关闭。开启后隐藏打印/PDF、Mermaid 下载和大图查看，
+  // 并使用 site.title 显示固定水印，同时禁止页面文字选择与复制。
+  restrictedMode: false,
 })

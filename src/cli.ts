@@ -62,8 +62,7 @@ function exposeConfig(config: ResolvedDocNestConfig): void {
   process.env.DOCS_THEME_DEFAULT = config.appearance.defaultTheme;
   process.env.DOCS_THEME_MODE_DEFAULT = config.appearance.defaultMode;
   process.env.DOCS_THEME_ENABLED = JSON.stringify(config.appearance.enabledThemes);
-  process.env.DOCS_WATERMARK_ENABLED = String(config.export.watermark.enabled);
-  process.env.DOCS_WATERMARK_TEXT = config.export.watermark.text;
+  process.env.DOCS_RESTRICTED_MODE = String(config.restrictedMode);
   process.env.DOCS_HOST = config.server.host;
   process.env.DOCS_PORT_START = String(config.server.port);
   process.env.DOCS_WATCH_ENABLED = String(config.server.watch);

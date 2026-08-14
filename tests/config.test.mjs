@@ -30,7 +30,7 @@ test('defaults to project docs and derives a neutral site identity', async () =>
   assert.equal(config.auth.stateFile, path.join(projectRoot, '.docnest/auth.json'))
   assert.equal(config.auth.localStorageKey, 'docnest:demo-project:auth-passphrase')
   assert.equal(config.auth.sessionTtlMinutes, 24 * 60)
-  assert.equal(config.export.watermark.enabled, false)
+  assert.equal(config.restrictedMode, false)
 })
 
 test('normalizes the legacy current-docs theme name to Slate Modern', async () => {
@@ -47,7 +47,7 @@ test('normalizes the legacy current-docs theme name to Slate Modern', async () =
   assert.deepEqual(config.appearance.enabledThemes, ['slate-modern', 'archive-room'])
 })
 
-test('loads project-local branding, root order, server and watermark config', async () => {
+test('loads project-local branding, root order, server and reading policy config', async () => {
   const projectRoot = await mkdtemp(path.join(os.tmpdir(), 'docnest-config-'))
   await mkdir(path.join(projectRoot, 'docs'))
   await writeFile(path.join(projectRoot, 'package.json'), JSON.stringify({ name: 'demo-project' }))
@@ -70,7 +70,7 @@ test('loads project-local branding, root order, server and watermark config', as
         localStorageKey: 'project-auth-passphrase',
         sessionTtlMinutes: 90,
       },
-      export: { watermark: { enabled: true, text: '单次导出水印' } },
+      restrictedMode: true,
     }`,
   )
 
@@ -93,5 +93,5 @@ test('loads project-local branding, root order, server and watermark config', as
     defaultMode: 'dark',
     enabledThemes: ['archive-room', 'swiss-manual'],
   })
-  assert.deepEqual(config.export.watermark, { enabled: true, text: '单次导出水印' })
+  assert.equal(config.restrictedMode, true)
 })

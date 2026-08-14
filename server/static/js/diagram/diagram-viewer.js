@@ -4,7 +4,12 @@ let defaultZoom = 1;
 let currentSvg = null;
 let isFullscreen = false;
 
+function isDocNestRestrictedMode() {
+  return !!(window.DOCNEST_CONFIG && window.DOCNEST_CONFIG.restrictedMode === true);
+}
+
 function setupDiagramViewer() {
+  if (isDocNestRestrictedMode()) return;
   const diagrams = document.querySelectorAll('.markdown-body .mermaid');
   diagrams.forEach((diagram, index) => {
     // 添加下载按钮
@@ -38,6 +43,7 @@ function setupDiagramViewer() {
 }
 
 function openDiagramViewer(svgElement) {
+  if (isDocNestRestrictedMode()) return;
   const viewer = document.getElementById('diagram-viewer');
   const container = document.getElementById('diagram-viewer-svg-container');
   

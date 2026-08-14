@@ -313,7 +313,7 @@
     return Math.max(minBreakY - startY, searchStartY + bestRow - startY);
   }
 
-  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermarkEnabled, watermarkText) {
+  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark) {
     var pageWidth = pdf.internal.pageSize.getWidth();
     var pageHeight = pdf.internal.pageSize.getHeight();
     var usableWidth = pageWidth - margin * 2;
@@ -357,8 +357,14 @@
         sliceHeight
       );
 
-      if (watermarkEnabled) {
-        drawWatermarkPattern(context, pageCanvas.width, pageCanvas.height, pageCanvasHeight, watermarkText);
+      if (watermark && watermark.enabled) {
+        drawWatermarkPattern(
+          context,
+          pageCanvas.width,
+          pageCanvas.height,
+          pageCanvasHeight,
+          watermark.text,
+        );
       }
 
       if (pageIndex > 0) {
@@ -413,18 +419,17 @@
   function openPdfExportDialog() {
     return new Promise(function(resolve) {
       var config = window.DOCNEST_CONFIG || {};
-      var defaultWatermarkEnabled = config.watermarkEnabled === true;
-      var defaultWatermarkText = String(config.watermarkText || document.title || '');
+      var defaultWatermarkText = String(config.siteTitle || document.title || '');
       var modalId = 'pdf-export-modal';
       var overlay = document.createElement('div');
       overlay.className = 'pdf-export-modal';
       overlay.innerHTML = [
         '<div class="pdf-export-modal__panel" role="dialog" aria-modal="true" aria-labelledby="pdf-export-title">',
           '<div class="pdf-export-modal__title" id="pdf-export-title">下载 PDF</div>',
-          '<div class="pdf-export-modal__desc">导出前确认本次 PDF 是否需要水印；本次修改不会写回项目配置。</div>',
+          '<div class="pdf-export-modal__desc">可为本次导出的 PDF 临时添加水印，不会修改项目配置。</div>',
           '<label class="pdf-export-modal__option">',
             '<input type="checkbox" id="pdf-export-watermark-checkbox">',
-            '<span class="pdf-export-modal__option-text">启用水印</span>',
+            '<span class="pdf-export-modal__option-text">本次导出添加水印</span>',
           '</label>',
           '<label class="pdf-export-modal__watermark-field" for="pdf-export-watermark-text">水印文字</label>',
           '<input class="pdf-export-modal__watermark-input" id="pdf-export-watermark-text" type="text" maxlength="80">',
@@ -446,44 +451,37 @@
       }
 
       overlay.addEventListener('click', function(event) {
-        if (event.target === overlay) {
-          close(null);
-        }
+        if (event.target === overlay) close(null);
       });
-
       overlay.querySelector('[data-action="cancel"]').addEventListener('click', function() {
         close(null);
       });
-
       overlay.querySelector('[data-action="confirm"]').addEventListener('click', function() {
         var checkbox = overlay.querySelector('#pdf-export-watermark-checkbox');
         var watermarkInput = overlay.querySelector('#pdf-export-watermark-text');
         close({
-          watermarkEnabled: !!(checkbox && checkbox.checked),
-          watermarkText: watermarkInput ? watermarkInput.value.trim() : defaultWatermarkText,
+          enabled: !!(checkbox && checkbox.checked),
+          text: watermarkInput ? watermarkInput.value.trim() : defaultWatermarkText,
         });
       });
 
       document.body.appendChild(overlay);
       if (typeof pushModal === 'function') {
-        pushModal(modalId, function() {
-          close(null);
-        });
+        pushModal(modalId, function() { close(null); });
       }
 
       var checkbox = overlay.querySelector('#pdf-export-watermark-checkbox');
-      if (checkbox) {
-        checkbox.checked = defaultWatermarkEnabled;
-        checkbox.addEventListener('change', function() {
-          var watermarkInput = overlay.querySelector('#pdf-export-watermark-text');
-          if (watermarkInput) watermarkInput.disabled = !checkbox.checked;
-        });
-        checkbox.focus();
-      }
       var watermarkInput = overlay.querySelector('#pdf-export-watermark-text');
       if (watermarkInput) {
         watermarkInput.value = defaultWatermarkText;
-        watermarkInput.disabled = !defaultWatermarkEnabled;
+        watermarkInput.disabled = true;
+      }
+      if (checkbox) {
+        checkbox.checked = false;
+        checkbox.addEventListener('change', function() {
+          if (watermarkInput) watermarkInput.disabled = !checkbox.checked;
+        });
+        checkbox.focus();
       }
     });
   }
@@ -568,7 +566,7 @@
     }
   }
 
-  function exportCurrentDoc(button, options) {
+  function exportCurrentDoc(button, watermark) {
     var article = document.querySelector('.main-content .markdown-body');
     if (!article) {
       showPdfExportError('未找到当前文档内容，无法导出 PDF。');
@@ -588,21 +586,13 @@
           format: 'a4',
           compress: true,
         });
-        var config = window.DOCNEST_CONFIG || {};
-        var watermarkEnabled = options && typeof options.watermarkEnabled === 'boolean'
-          ? options.watermarkEnabled
-          : config.watermarkEnabled === true;
-        var watermarkText = options && options.watermarkText
-          ? options.watermarkText
-          : String(config.watermarkText || document.title || '');
-
         return waitForExportReady()
           .then(function() {
             return renderCanvas(exportRoot);
           })
           .then(function(canvas) {
             var blockBreakpoints = collectBlockBreakpoints(exportRoot, canvas.height / Math.max(exportRoot.scrollHeight, 1));
-            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermarkEnabled, watermarkText);
+            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark);
             pdf.save(getExportFileName() + '.pdf');
           })
           .finally(function() {
@@ -619,13 +609,13 @@
   }
 
   function init() {
+    if (window.DOCNEST_CONFIG && window.DOCNEST_CONFIG.restrictedMode === true) return;
     var button = document.getElementById('download-doc-pdf-btn');
     if (!button) return;
 
     button.addEventListener('click', function() {
-      openPdfExportDialog().then(function(result) {
-        if (!result) return;
-        exportCurrentDoc(button, result);
+      openPdfExportDialog().then(function(watermark) {
+        if (watermark) exportCurrentDoc(button, watermark);
       });
     });
   }

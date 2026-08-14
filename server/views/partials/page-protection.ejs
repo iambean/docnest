@@ -1,0 +1,31 @@
+<% if (docsRestrictedMode) { %>
+  <div class="docnest-page-watermark" aria-hidden="true">
+    <% for (let index = 0; index < 12; index += 1) { %>
+      <span class="docnest-page-watermark__item"><%= docsPageWatermarkText %></span>
+    <% } %>
+  </div>
+  <script>
+    document.documentElement.classList.add('docnest-page-protected', 'docnest-restricted');
+    (function() {
+      function isEditableTarget(target) {
+        return !!(target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]'));
+      }
+
+      function preventProtectedAction(event) {
+        if (!isEditableTarget(event.target)) event.preventDefault();
+      }
+
+      document.addEventListener('selectstart', preventProtectedAction);
+      document.addEventListener('copy', preventProtectedAction);
+      document.addEventListener('cut', preventProtectedAction);
+      document.addEventListener('dragstart', preventProtectedAction);
+      document.addEventListener('keydown', function(event) {
+        if (isEditableTarget(event.target)) return;
+        var key = String(event.key || '').toLowerCase();
+        if ((event.metaKey || event.ctrlKey) && (key === 'a' || key === 'c' || key === 'x')) {
+          event.preventDefault();
+        }
+      });
+    })();
+  </script>
+<% } %>

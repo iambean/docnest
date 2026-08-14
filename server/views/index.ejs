@@ -17,6 +17,7 @@
   <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
 </head>
 <body>
+  <%- include('partials/page-protection') %>
   <div class="container">
     <%- include('partials/header', { showBackLink: false }) %>
     <div class="content">
@@ -29,14 +30,16 @@
       </main>
     </div>
   </div>
-  <%- include('partials/diagram-viewer') %>
-  <!-- 按依赖顺序加载模块 -->
-  <script src="/static/js/utils/modal-stack.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-viewer.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-zoom.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-drag.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-controls.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-download.js?v=<%= assetVersion %>"></script>
+  <% if (!docsRestrictedMode) { %>
+    <%- include('partials/diagram-viewer') %>
+    <!-- 按依赖顺序加载模块 -->
+    <script src="/static/js/utils/modal-stack.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-viewer.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-zoom.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-drag.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-controls.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-download.js?v=<%= assetVersion %>"></script>
+  <% } %>
   <script src="/static/js/utils/app.js?v=<%= assetVersion %>"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>

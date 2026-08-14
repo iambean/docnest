@@ -61,10 +61,15 @@ test('configured single-passphrase auth protects documents and verifies every en
       stateFile: '.docnest/auth.json',
       sessionTtlMinutes: 60,
     },
+    restrictedMode: true,
     server: { openBrowser: false },
   }`)
   await mkdir(path.join(root, 'docs'))
   await writeFile(path.join(root, 'docs', 'README.md'), '# 受保护文档\n')
+  await writeFile(
+    path.join(root, 'docs', '流程图.md'),
+    '# 受保护流程图\n\n```mermaid\nflowchart LR\n  A --> B\n```\n',
+  )
 
   const port = await findFreePort()
   const child = spawn(process.execPath, [cliPath, 'serve', '--no-open', '--port', String(port)], {
@@ -130,7 +135,22 @@ test('configured single-passphrase auth protects documents and verifies every en
     headers: { cookie: oldCookie },
   })
   assert.equal(authorizedDoc.status, 200)
-  assert.match(await authorizedDoc.text(), /受保护文档/)
+  const authorizedDocHtml = await authorizedDoc.text()
+  assert.match(authorizedDocHtml, /受保护文档/)
+  assert.match(authorizedDocHtml, /docnest-page-watermark/)
+  assert.doesNotMatch(authorizedDocHtml, /download-doc-pdf-btn/)
+  assert.doesNotMatch(authorizedDocHtml, /doc-pdf-export\.js/)
+  assert.doesNotMatch(authorizedDocHtml, /window\.print\(\)/)
+
+  const restrictedDiagram = await request(port, '/doc?path=流程图.md', {
+    headers: { cookie: oldCookie },
+  })
+  assert.equal(restrictedDiagram.status, 200)
+  const restrictedDiagramHtml = await restrictedDiagram.text()
+  assert.match(restrictedDiagramHtml, /class="mermaid"/)
+  assert.doesNotMatch(restrictedDiagramHtml, /diagram-viewer\.js/)
+  assert.doesNotMatch(restrictedDiagramHtml, /diagram-download\.js/)
+  assert.doesNotMatch(restrictedDiagramHtml, /id="diagram-viewer"/)
 
   const state = await readFile(path.join(root, '.docnest', 'auth.json'), 'utf8')
   assert.doesNotMatch(state, /旧口令/)

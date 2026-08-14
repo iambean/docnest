@@ -48,12 +48,11 @@ export type DocNestConfig = {
     localStorageKey?: string;
     sessionTtlMinutes?: number;
   };
-  export?: {
-    watermark?: {
-      enabled?: boolean;
-      text?: string;
-    };
-  };
+  /**
+   * Restrict the reading experience to in-browser viewing only.
+   * Restricted mode also enables the fixed site-title watermark.
+   */
+  restrictedMode?: boolean;
 };
 
 export function defineConfig(config: DocNestConfig): DocNestConfig {
@@ -74,9 +73,7 @@ export type ResolvedDocNestConfig = Required<DocNestConfig> & {
     localStorageKey: string;
     sessionTtlMinutes: number;
   };
-  export: {
-    watermark: Required<NonNullable<NonNullable<DocNestConfig['export']>['watermark']>>;
-  };
+  restrictedMode: boolean;
 };
 
 const DEFAULT_CONFIG_FILE = 'docnest.config.mjs';
@@ -152,7 +149,6 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
   const appearance = userConfig.appearance ?? {};
   const server = userConfig.server ?? {};
   const auth = userConfig.auth ?? {};
-  const watermark = userConfig.export?.watermark ?? {};
   const storageKeyPrefix = site.storageKeyPrefix?.trim() || `docnest:${projectName}`;
   const authLocalStorageKey =
     auth.localStorageKey?.trim() || `${storageKeyPrefix}:auth-passphrase`;
@@ -185,11 +181,6 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
       localStorageKey: authLocalStorageKey,
       sessionTtlMinutes: normalizePositiveNumber(auth.sessionTtlMinutes, 24 * 60),
     },
-    export: {
-      watermark: {
-        enabled: watermark.enabled ?? false,
-        text: watermark.text?.trim() || site.title?.trim() || projectName,
-      },
-    },
+    restrictedMode: userConfig.restrictedMode === true,
   } as ResolvedDocNestConfig;
 }

@@ -40,6 +40,58 @@ body {
   font-family: var(--doc-font-ui);
 }
 
+/* Protected reading mode: no text selection/copy and a persistent viewport watermark. */
+html.docnest-page-protected body,
+html.docnest-page-protected body * {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+}
+
+html.docnest-page-protected body input,
+html.docnest-page-protected body textarea,
+html.docnest-page-protected body select,
+html.docnest-page-protected body [contenteditable="true"] {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
+}
+
+/* Restricted mode keeps Mermaid inline but removes every affordance for opening
+ * or exporting a larger copy of the diagram. */
+html.docnest-restricted .markdown-body .mermaid {
+  cursor: default;
+}
+
+html.docnest-restricted .markdown-body .mermaid::after,
+html.docnest-restricted .markdown-body .mermaid-download-btn {
+  display: none !important;
+}
+
+.docnest-page-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.docnest-page-watermark__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--linear-text, rgba(15, 23, 42, 0.42));
+  font: 700 clamp(0.75rem, 1.5vw, 1.5rem)/1 var(--doc-font-mono);
+  letter-spacing: 0.08em;
+  opacity: 0.12;
+  transform: rotate(-24deg);
+  white-space: nowrap;
+}
+
 ::selection {
   background: var(--doc-selection);
 }
@@ -318,8 +370,7 @@ body[data-doc-theme][data-theme="dark"] .pdf-export-modal__panel {
 }
 
 body[data-doc-theme][data-theme="dark"] .download-menu-content button,
-body[data-doc-theme][data-theme="dark"] .pdf-export-modal__option,
-body[data-doc-theme][data-theme="dark"] .pdf-export-modal__watermark-input {
+body[data-doc-theme][data-theme="dark"] .pdf-export-modal__btn {
   border-color: var(--linear-border);
   background: var(--linear-bg-subtle);
   color: var(--linear-text);

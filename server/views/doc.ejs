@@ -15,10 +15,13 @@
   <script src="/static/js/core/theme.js?v=<%= assetVersion %>"></script>
   <script src="/static/js/core/mermaid-init.js?v=<%= assetVersion %>"></script>
   <script src="/static/js/core/doc-client-nav.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/core/doc-pdf-export.js?v=<%= assetVersion %>"></script>
+  <% if (!docsRestrictedMode) { %>
+    <script src="/static/js/core/doc-pdf-export.js?v=<%= assetVersion %>"></script>
+  <% } %>
   <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
 </head>
 <body data-current-path="<%= currentPath %>">
+  <%- include('partials/page-protection') %>
   <div class="container">
     <%- include('partials/header', { showBackLink: true, showPrintButton: true, showPdfButton: true }) %>
     <div class="content">
@@ -34,26 +37,31 @@
       </main>
     </div>
   </div>
-  <%- include('partials/diagram-viewer') %>
-  <!-- 按依赖顺序加载模块 -->
-  <script src="/static/js/utils/modal-stack.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-viewer.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-zoom.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-drag.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-controls.js?v=<%= assetVersion %>"></script>
-  <script src="/static/js/diagram/diagram-download.js?v=<%= assetVersion %>"></script>
+  <% if (!docsRestrictedMode) { %>
+    <%- include('partials/diagram-viewer') %>
+    <!-- 按依赖顺序加载模块 -->
+    <script src="/static/js/utils/modal-stack.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-viewer.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-zoom.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-drag.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-controls.js?v=<%= assetVersion %>"></script>
+    <script src="/static/js/diagram/diagram-download.js?v=<%= assetVersion %>"></script>
+  <% } %>
   <script src="/static/js/utils/app.js?v=<%= assetVersion %>"></script>
+  <% if (!docsRestrictedMode) { %>
+    <script>
+      // 打印当前文章
+      (function() {
+        const printBtn = document.getElementById('print-doc-btn');
+        if (printBtn) {
+          printBtn.addEventListener('click', function() {
+            window.print();
+          });
+        }
+      })();
+    </script>
+  <% } %>
   <script>
-    // 打印当前文章
-    (function() {
-      const printBtn = document.getElementById('print-doc-btn');
-      if (printBtn) {
-        printBtn.addEventListener('click', function() {
-          window.print();
-        });
-      }
-    })();
-
     // 高亮当前文档；展开状态：恢复上次保存的 + 当前文档所在路径，不折叠其他已展开项
     (function() {
       const STORAGE_KEY = <%- JSON.stringify(docsStorageKeyPrefix + ':open-dirs') %>;

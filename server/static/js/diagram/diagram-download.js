@@ -1,5 +1,10 @@
 // 图表下载和复制功能
+function isDocNestRestrictedMode() {
+  return !!(window.DOCNEST_CONFIG && window.DOCNEST_CONFIG.restrictedMode === true);
+}
+
 function downloadCurrentDiagram() {
+  if (isDocNestRestrictedMode()) return;
   if (!currentSvg) return;
   // 获取原始 SVG（移除缩放样式）
   const originalSvg = currentSvg.cloneNode(true);
@@ -10,6 +15,7 @@ function downloadCurrentDiagram() {
 }
 
 function copyCurrentDiagram() {
+  if (isDocNestRestrictedMode()) return;
   if (!currentSvg) return;
   
   // 获取原始 SVG（移除缩放样式）
@@ -199,6 +205,7 @@ function showCopyNotification(message, success) {
 
 // 下载功能
 function showDownloadMenu(svgElement, defaultName) {
+  if (isDocNestRestrictedMode()) return;
   const menu = document.createElement('div');
   menu.className = 'download-menu';
   menu.id = 'download-menu';
@@ -246,6 +253,7 @@ function closeDownloadMenu() {
 }
 
 function downloadDiagram(format, name) {
+  if (isDocNestRestrictedMode()) return;
   const svg = window.currentDownloadSvg;
   if (!svg) return;
   

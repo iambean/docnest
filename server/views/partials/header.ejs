@@ -13,13 +13,13 @@
     </div>
     <div class="header-meta">
       <div class="header-actions">
-        <% if (typeof showPrintButton !== 'undefined' && showPrintButton) { %>
+        <% if (typeof showPrintButton !== 'undefined' && showPrintButton && !docsRestrictedMode) { %>
           <button type="button" id="print-doc-btn" class="header-action-btn print-btn" title="打印当前文章">
             <span class="print-icon">🖨️</span>
             <span class="header-action-text">打印</span>
           </button>
         <% } %>
-        <% if (typeof showPdfButton !== 'undefined' && showPdfButton) { %>
+        <% if (typeof showPdfButton !== 'undefined' && showPdfButton && !docsRestrictedMode) { %>
           <button type="button" id="download-doc-pdf-btn" class="header-action-btn download-pdf-btn" title="下载当前文章 PDF">
             <span class="download-pdf-icon">⬇️</span>
             <span class="header-action-text">下载 PDF</span>

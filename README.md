@@ -20,7 +20,7 @@ npx docnest serve
 
 ## 配置
 
-复制 `docnest.config.example.mjs` 为项目根目录的 `docnest.config.mjs`，配置项目自己的标题、目录顺序、存储键前缀和 PDF 水印。
+复制 `docnest.config.example.mjs` 为项目根目录的 `docnest.config.mjs`，配置项目自己的标题、目录顺序、存储键前缀和阅读限制策略。
 
 ### 外观主题
 
@@ -56,7 +56,18 @@ export default defineConfig({
 
 未配置 `appearance` 时使用 `slate-modern + auto`。旧配置中的 `current-docs` 会自动迁移到 `slate-modern`，正文视觉不会发生变化；旧版保存的 `markdown-theme` 明暗偏好也会自动迁移到新的项目级存储键。
 
-水印默认关闭。开启后，PDF 导出弹窗会读取配置文字，并允许本次导出临时修改；临时修改不会写回文件或浏览器存储。
+PDF、页面水印和图表外带能力由一个开关统一控制，默认使用普通阅读模式：
+
+```js
+export default defineConfig({
+  restrictedMode: false,
+})
+```
+
+- `restrictedMode: false`：显示打印和 PDF 导出，允许 Mermaid 图下载与大图查看。导出 PDF 时会弹出本次水印设置，可选择是否添加并自定义文案；默认文案为 `site.title`，不会写回配置。
+- `restrictedMode: true`：隐藏打印和 PDF 导出入口且不加载导出模块；使用 `site.title` 作为固定水印，禁止文字选择、复制、剪切和拖拽，并隐藏 Mermaid 下载与大图查看入口。Mermaid 仍会在正文中正常渲染。
+
+受限模式只移除 DocNest 提供的页面入口和脚本，不承诺对浏览器开发者工具或系统级截图提供绝对防护。
 
 ### 极简单口令授权
 

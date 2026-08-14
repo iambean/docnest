@@ -2,8 +2,8 @@
   window.DOCNEST_CONFIG = {
     authEnabled: <%= docsAuthEnabled ? 'true' : 'false' %>,
     authStorageKey: <%- JSON.stringify(docsAuthStorageKey) %>,
-    watermarkEnabled: <%= docsWatermarkEnabled ? 'true' : 'false' %>,
-    watermarkText: <%- JSON.stringify(docsWatermarkText) %>,
+    siteTitle: <%- JSON.stringify(docsTitle) %>,
+    restrictedMode: <%= docsRestrictedMode ? 'true' : 'false' %>,
     storageKeyPrefix: <%- JSON.stringify(docsStorageKeyPrefix) %>,
     appearance: {
       defaultTheme: <%- JSON.stringify(docsThemeDefault) %>,

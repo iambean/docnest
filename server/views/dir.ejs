@@ -15,6 +15,7 @@
   <script src="/static/js/core/sidebar.js?v=<%= assetVersion %>"></script>
 </head>
 <body data-current-dir-path="<%= currentDirPath %>">
+  <%- include('partials/page-protection') %>
   <div class="container">
     <%- include('partials/header', { showBackLink: true, showPrintButton: false, showPdfButton: false }) %>
     <div class="content">
@@ -47,9 +48,11 @@
                 </a>
               <% }); %>
               <% listing.files.forEach(function(file) { %>
-                <a href="/doc?path=<%= encodeURIComponent(file.path) %>" class="dir-listing-item is-file">
+                <% const isReadme = file.name.toLowerCase() === 'readme.md'; %>
+                <a href="/doc?path=<%= encodeURIComponent(file.path) %>" class="dir-listing-item is-file<%= isReadme ? ' is-readme' : '' %>">
                   <span class="dir-listing-item-icon">📄</span>
                   <span class="dir-listing-item-name"><%= file.name %></span>
+                  <% if (isReadme) { %><span class="dir-listing-item-badge">目录说明</span><% } %>
                 </a>
               <% }); %>
             </div>

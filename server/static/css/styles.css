@@ -451,13 +451,49 @@ body[data-theme="dark"] .dir-toggle.active {
   color: var(--linear-text);
   text-decoration: none;
   font-size: 0.8125rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.35rem 0.5rem;
   border-radius: var(--linear-radius);
   transition: background-color 0.15s ease, color 0.15s ease;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tree-kind-icon-file {
+  flex: 0 0 auto;
+}
+
+.tree-file-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-link.readme-link {
+  background: rgba(94, 106, 210, 0.07);
+  font-weight: 600;
+}
+
+.file-link.readme-link:hover,
+.file-link.readme-link.active {
+  background: rgba(94, 106, 210, 0.14);
+}
+
+.tree-readme-badge,
+.dir-listing-item-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid rgba(94, 106, 210, 0.34);
+  border-radius: 999px;
+  color: var(--linear-accent);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
 .file-link:hover {
@@ -2230,6 +2266,7 @@ body[data-theme="dark"] .pdf-export-modal__desc {
 }
 
 body[data-theme="dark"] .pdf-export-modal__option,
+body[data-theme="dark"] .pdf-export-modal__watermark-input,
 body[data-theme="dark"] .pdf-export-modal__btn {
   background: #1c1c1e;
   border-color: #2c2c2e;
@@ -5694,6 +5731,17 @@ body[data-theme="dark"] .breadcrumb-separator {
 
 .dir-listing-item.is-file .dir-listing-item-name {
   color: var(--linear-text-muted);
+}
+
+.dir-listing-item.is-readme {
+  background: rgba(94, 106, 210, 0.07);
+  border-left: 3px solid var(--linear-accent);
+  padding-left: calc(0.875rem - 3px);
+}
+
+.dir-listing-item.is-readme .dir-listing-item-name {
+  color: var(--linear-text);
+  font-weight: 650;
 }
 
 .dir-listing-item.is-dir .dir-listing-item-name {
