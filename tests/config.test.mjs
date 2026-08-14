@@ -26,6 +26,9 @@ test('defaults to project docs and derives a neutral site identity', async () =>
     'archive-room',
     'swiss-manual',
   ])
+  assert.equal(config.auth.enabled, false)
+  assert.equal(config.auth.stateFile, path.join(projectRoot, '.docnest/auth.json'))
+  assert.equal(config.auth.sessionTtlMinutes, 24 * 60)
   assert.equal(config.export.watermark.enabled, false)
 })
 
@@ -59,6 +62,12 @@ test('loads project-local branding, root order, server and watermark config', as
         enabledThemes: ['archive-room', 'swiss-manual', 'archive-room'],
       },
       server: { port: 3130, openBrowser: false },
+      auth: {
+        enabled: true,
+        passphrase: '初始口令',
+        stateFile: '.runtime/docnest-auth.json',
+        sessionTtlMinutes: 90,
+      },
       export: { watermark: { enabled: true, text: '单次导出水印' } },
     }`,
   )
@@ -70,6 +79,12 @@ test('loads project-local branding, root order, server and watermark config', as
   assert.deepEqual(config.navigation.rootDirectoryOrder, ['architecture', '@temp'])
   assert.equal(config.server.port, 3130)
   assert.equal(config.server.openBrowser, false)
+  assert.deepEqual(config.auth, {
+    enabled: true,
+    passphrase: '初始口令',
+    stateFile: path.join(projectRoot, '.runtime/docnest-auth.json'),
+    sessionTtlMinutes: 90,
+  })
   assert.deepEqual(config.appearance, {
     defaultTheme: 'archive-room',
     defaultMode: 'dark',

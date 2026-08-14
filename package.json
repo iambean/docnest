@@ -1,6 +1,6 @@
 {
   "name": "docnest",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "可复用的本地 Markdown 文档中心",
   "repository": {
     "type": "git",
@@ -28,7 +28,8 @@
     "server/static/img/404-deep-space-light.webp",
     "server/static/img/404-deep-space.webp",
     "server/static/js",
-    "server/views"
+    "server/views",
+    "docnest.config.example.mjs"
   ],
   "engines": {
     "node": ">=20"

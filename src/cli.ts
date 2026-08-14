@@ -68,6 +68,10 @@ function exposeConfig(config: ResolvedDocNestConfig): void {
   process.env.DOCS_PORT_START = String(config.server.port);
   process.env.DOCS_WATCH_ENABLED = String(config.server.watch);
   process.env.DOCS_OPEN_BROWSER = String(config.server.openBrowser);
+  const runtime = globalThis as typeof globalThis & {
+    __DOCNEST_AUTH_CONFIG__?: ResolvedDocNestConfig['auth'];
+  };
+  runtime.__DOCNEST_AUTH_CONFIG__ = config.auth;
 }
 
 const dynamicImport = new Function('specifier', 'return import(specifier)') as (

@@ -54,7 +54,52 @@
           <span class="theme-icon" aria-hidden="true">A</span>
           <span class="theme-text">跟随系统</span>
         </button>
+        <% if (docsAuthEnabled) { %>
+          <div class="auth-actions" aria-label="文档授权">
+            <button id="auth-change-password-btn" class="header-action-btn auth-change-password-btn" type="button">
+              修改口令
+            </button>
+            <form action="/auth/logout" method="post" class="auth-logout-form">
+              <button class="header-action-btn auth-logout-btn" type="submit">退出</button>
+            </form>
+          </div>
+        <% } %>
       </div>
     </div>
   </div>
 </header>
+<% if (docsAuthEnabled) { %>
+  <div class="auth-modal" id="auth-change-password-modal" hidden>
+    <div class="auth-modal-backdrop" data-auth-close></div>
+    <section class="auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="auth-change-password-title">
+      <div class="auth-modal-header">
+        <div>
+          <p class="auth-modal-eyebrow">DOCUMENT ACCESS</p>
+          <h2 id="auth-change-password-title">修改授权口令</h2>
+        </div>
+        <button type="button" class="auth-modal-close" data-auth-close aria-label="关闭">×</button>
+      </div>
+      <p class="auth-modal-help">修改后所有已打开的文档会退出授权，需要使用新口令重新进入。</p>
+      <form id="auth-change-password-form" class="auth-form">
+        <label>
+          当前口令
+          <input type="password" name="currentPassphrase" autocomplete="current-password" required>
+        </label>
+        <label>
+          新口令
+          <input type="password" name="nextPassphrase" autocomplete="new-password" required>
+        </label>
+        <label>
+          确认新口令
+          <input type="password" name="confirmPassphrase" autocomplete="new-password" required>
+        </label>
+        <p class="auth-form-error" id="auth-change-password-error" role="alert" hidden></p>
+        <div class="auth-modal-actions">
+          <button type="button" class="auth-secondary-btn" data-auth-close>取消</button>
+          <button type="submit" class="auth-primary-btn">保存新口令</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <script src="/static/js/core/auth.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : 'dev' %>"></script>
+<% } %>

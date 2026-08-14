@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>授权进入 - <%= docsTitle %></title>
+  <link rel="icon" href="/favicon.ico?v=<%= assetVersion %>" sizes="any">
+  <link rel="stylesheet" href="/static/css/styles.css?v=<%= assetVersion %>">
+  <link rel="stylesheet" href="/static/css/themes.css?v=<%= assetVersion %>">
+</head>
+<body class="auth-page">
+  <main class="auth-login-card" aria-labelledby="auth-login-title">
+    <div class="auth-login-brand">
+      <% if (docsLogo) { %>
+        <img class="auth-login-logo" src="<%= docsLogo %>" alt="">
+      <% } else { %>
+        <span class="auth-login-logo-fallback" aria-hidden="true">📚</span>
+      <% } %>
+      <div>
+        <p class="auth-login-eyebrow">LOCAL DOCUMENT CENTER</p>
+        <h1 id="auth-login-title"><%= docsTitle %></h1>
+        <p><%= docsSubtitle %></p>
+      </div>
+    </div>
+    <div class="auth-login-divider"></div>
+    <p class="auth-login-description">此文档中心需要授权口令。知道口令即可查看全部文档。</p>
+    <form action="/auth/login" method="post" class="auth-form auth-login-form">
+      <input type="hidden" name="next" value="<%= nextPath %>">
+      <label>
+        授权口令
+        <input type="password" name="passphrase" autocomplete="current-password" autofocus required>
+      </label>
+      <% if (error) { %>
+        <p class="auth-form-error" role="alert"><%= error %></p>
+      <% } %>
+      <button type="submit" class="auth-primary-btn">进入文档中心</button>
+    </form>
+    <p class="auth-login-note">没有账号体系，也没有角色区分；口令是唯一的入口。</p>
+  </main>
+</body>
+</html>

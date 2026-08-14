@@ -31,6 +31,14 @@ export default defineConfig({
     watch: true,
     openBrowser: true,
   },
+  auth: {
+    // 极简单口令授权；关闭时文档中心保持本地开放。
+    enabled: false,
+    // 仅首次启动且授权状态文件不存在时使用，之后可在页面内修改。
+    passphrase: '',
+    stateFile: '.docnest/auth.json',
+    sessionTtlMinutes: 24 * 60,
+  },
   export: {
     watermark: {
       enabled: false,

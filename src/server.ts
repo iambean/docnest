@@ -10,6 +10,7 @@ const { Server } = require('socket.io');
 const chokidar = require('chokidar');
 const MarkdownIt = require('markdown-it');
 const hljs = require('highlight.js');
+const { createAuthManager } = require('./auth');
 
 const app = express();
 const server = createServer(app);
@@ -78,7 +79,15 @@ const JSPDF_DIR = dependencyDir('jspdf');
 const injectedDocumentStore = globalThis.__DOCNEST_DOCUMENT_STORE__ || null;
 const STORAGE_DRIVER = injectedDocumentStore?.name || 'local';
 const DOCS_ROOT_LABEL = injectedDocumentStore?.rootLabel || DOCS_DIR;
-const AUTH_ENABLED = globalThis.__DOCNEST_AUTH_ENABLED__ === true;
+const AUTH_CONFIG = globalThis.__DOCNEST_AUTH_CONFIG__ || {
+  enabled: false,
+  passphrase: '',
+  stateFile: path.join(process.cwd(), '.docnest', 'auth.json'),
+  sessionTtlMinutes: 24 * 60,
+};
+const AUTH_MANAGER = createAuthManager(AUTH_CONFIG);
+const BUILT_IN_AUTH_ENABLED = AUTH_MANAGER.enabled;
+const AUTH_ENABLED = BUILT_IN_AUTH_ENABLED || globalThis.__DOCNEST_AUTH_ENABLED__ === true;
 
 // 配置 EJS 模板引擎
 app.set('view engine', 'ejs');
@@ -92,6 +101,7 @@ app.locals.docsThemeModeDefault = DOCS_THEME_MODE_DEFAULT;
 app.locals.docsThemeEnabled = DOCS_THEME_ENABLED;
 app.locals.docsWatermarkEnabled = DOCS_WATERMARK_ENABLED;
 app.locals.docsWatermarkText = DOCS_WATERMARK_TEXT;
+app.locals.docsAuthEnabled = BUILT_IN_AUTH_ENABLED;
 
 function normalizeDocRelativePath(value) {
   const raw = String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
@@ -230,6 +240,134 @@ app.use('/vendor/html2canvas', express.static(HTML2CANVAS_DIR));
 app.use('/vendor/dompurify', express.static(DOMPURIFY_DIR));
 // jsPDF（本地，用于 Mermaid 图导出 PDF）
 app.use('/vendor/jspdf', express.static(JSPDF_DIR));
+
+app.use(express.json({ limit: '16kb' }));
+app.use(express.urlencoded({ extended: false, limit: '16kb' }));
+
+function readCookie(cookieHeader, name) {
+  if (!cookieHeader) return undefined;
+  for (const item of String(cookieHeader).split(';')) {
+    const separator = item.indexOf('=');
+    if (separator === -1) continue;
+    const key = item.slice(0, separator).trim();
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(item.slice(separator + 1).trim());
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function readAuthToken(req) {
+  return readCookie(req.headers.cookie, AUTH_MANAGER.sessionCookieName);
+}
+
+function safeNextPath(value) {
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('\\') ||
+    /[\r\n]/.test(value)
+  ) return '/';
+  return value;
+}
+
+function setAuthCookie(res, token) {
+  const maxAge = AUTH_MANAGER.sessionMaxAgeSeconds;
+  res.setHeader(
+    'Set-Cookie',
+    `${AUTH_MANAGER.sessionCookieName}=${encodeURIComponent(token)}; Max-Age=${maxAge}; Path=/; HttpOnly; SameSite=Lax`,
+  );
+}
+
+function clearAuthCookie(res) {
+  res.setHeader(
+    'Set-Cookie',
+    `${AUTH_MANAGER.sessionCookieName}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`,
+  );
+}
+
+function wantsJson(req) {
+  return req.path.startsWith('/auth/') || req.get('accept')?.includes('application/json');
+}
+
+function renderLoginPage(res, nextPath, error, status = 200) {
+  return res.status(status).render('login', {
+    nextPath: safeNextPath(nextPath),
+    error: error || '',
+    assetVersion: ASSET_VERSION,
+  });
+}
+
+app.get('/login', (req, res) => {
+  if (!BUILT_IN_AUTH_ENABLED) return res.redirect('/');
+  if (AUTH_MANAGER.authenticateSession(readAuthToken(req))) {
+    return res.redirect(safeNextPath(req.query.next));
+  }
+  const message = req.query.changed
+    ? '口令已更新，请使用新口令重新进入。'
+    : '';
+  return renderLoginPage(res, req.query.next, message);
+});
+
+app.post('/auth/login', (req, res) => {
+  if (!BUILT_IN_AUTH_ENABLED) return res.redirect('/');
+  const nextPath = safeNextPath(req.body?.next);
+  const token = AUTH_MANAGER.createSession(String(req.body?.passphrase || ''));
+  if (!token) return renderLoginPage(res, nextPath, '口令不正确，请重试。', 401);
+  setAuthCookie(res, token);
+  return res.redirect(nextPath);
+});
+
+app.post('/auth/logout', (req, res) => {
+  AUTH_MANAGER.revokeSession(readAuthToken(req));
+  clearAuthCookie(res);
+  return res.redirect('/login');
+});
+
+app.post('/auth/change-password', (req, res) => {
+  if (!BUILT_IN_AUTH_ENABLED || !AUTH_MANAGER.authenticateSession(readAuthToken(req))) {
+    return res.status(401).json({ ok: false, error: '当前会话未授权。' });
+  }
+
+  try {
+    const changed = AUTH_MANAGER.changePassphrase(
+      String(req.body?.currentPassphrase || ''),
+      String(req.body?.nextPassphrase || ''),
+    );
+    if (!changed) return res.status(401).json({ ok: false, error: '当前口令不正确。' });
+    clearAuthCookie(res);
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      error: error instanceof Error ? error.message : '新口令无效。',
+    });
+  }
+});
+
+function documentAuthMiddleware(req, res, next) {
+  if (!BUILT_IN_AUTH_ENABLED) return next();
+  if (req.path === '/health' || req.path === '/ready') return next();
+  if (AUTH_MANAGER.authenticateSession(readAuthToken(req))) {
+    res.locals.authenticated = true;
+    return next();
+  }
+  if (wantsJson(req)) return res.status(401).json({ ok: false, error: '需要授权口令。' });
+  return res.redirect(`/login?next=${encodeURIComponent(req.originalUrl || '/')}`);
+}
+
+app.use(documentAuthMiddleware);
+
+io.use((socket, next) => {
+  if (!BUILT_IN_AUTH_ENABLED) return next();
+  const token = readCookie(socket.handshake.headers.cookie, AUTH_MANAGER.sessionCookieName);
+  if (AUTH_MANAGER.authenticateSession(token)) return next();
+  return next(new Error('需要授权口令。'));
+});
 
 // 文档中的本地图片、附件等静态资源，只允许从文档根目录读取。
 app.get('/doc-asset/*', async (req, res) => {

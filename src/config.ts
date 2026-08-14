@@ -41,6 +41,12 @@ export type DocNestConfig = {
     watch?: boolean;
     openBrowser?: boolean;
   };
+  auth?: {
+    enabled?: boolean;
+    passphrase?: string;
+    stateFile?: string;
+    sessionTtlMinutes?: number;
+  };
   export?: {
     watermark?: {
       enabled?: boolean;
@@ -60,6 +66,12 @@ export type ResolvedDocNestConfig = Required<DocNestConfig> & {
   navigation: Required<NonNullable<DocNestConfig['navigation']>>;
   appearance: Required<NonNullable<DocNestConfig['appearance']>>;
   server: Required<NonNullable<DocNestConfig['server']>>;
+  auth: {
+    enabled: boolean;
+    passphrase: string;
+    stateFile: string;
+    sessionTtlMinutes: number;
+  };
   export: {
     watermark: Required<NonNullable<NonNullable<DocNestConfig['export']>['watermark']>>;
   };
@@ -88,6 +100,11 @@ function normalizePort(value: unknown, fallback: number): number {
   const port = Number(value);
   if (!Number.isInteger(port) || port < 1 || port > 65535) return fallback;
   return port;
+}
+
+function normalizePositiveNumber(value: unknown, fallback: number): number {
+  const normalized = Number(value);
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : fallback;
 }
 
 function normalizeThemeName(value: unknown): (typeof DOCNEST_THEME_NAMES)[number] | null {
@@ -132,6 +149,7 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
   const navigation = userConfig.navigation ?? {};
   const appearance = userConfig.appearance ?? {};
   const server = userConfig.server ?? {};
+  const auth = userConfig.auth ?? {};
   const watermark = userConfig.export?.watermark ?? {};
   const storageKeyPrefix = site.storageKeyPrefix?.trim() || `docnest:${projectName}`;
 
@@ -155,6 +173,12 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
       port: normalizePort(server.port, 3000),
       watch: server.watch ?? true,
       openBrowser: server.openBrowser ?? true,
+    },
+    auth: {
+      enabled: auth.enabled ?? false,
+      passphrase: typeof auth.passphrase === 'string' ? auth.passphrase : '',
+      stateFile: path.resolve(projectRoot, auth.stateFile?.trim() || '.docnest/auth.json'),
+      sessionTtlMinutes: normalizePositiveNumber(auth.sessionTtlMinutes, 24 * 60),
     },
     export: {
       watermark: {

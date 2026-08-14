@@ -58,6 +58,28 @@ export default defineConfig({
 
 水印默认关闭。开启后，PDF 导出弹窗会读取配置文字，并允许本次导出临时修改；临时修改不会写回文件或浏览器存储。
 
+### 极简单口令授权
+
+需要让文档中心只对知道口令的人开放时，可以启用单口令授权：
+
+```js
+export default defineConfig({
+  auth: {
+    enabled: true,
+    passphrase: '请替换为项目自己的长口令',
+    stateFile: '.docnest/auth.json',
+    sessionTtlMinutes: 24 * 60,
+  },
+})
+```
+
+授权只有一道关口，没有账号、密码组合或角色体系。首次启动时，`passphrase` 会初始化到由
+`stateFile` 指定的本地授权状态文件；状态文件只保存带随机盐的口令哈希，不保存明文口令。
+进入文档中心后，右上角的“修改口令”可以动态更新口令。修改后所有现有会话立即失效，必须使用新口令重新进入。
+建议把 `.docnest/` 加入宿主项目的 `.gitignore`，并为口令状态文件设置仅当前用户可读写的权限。
+
+授权开启但既没有状态文件，也没有初始 `passphrase` 时，DocNest 会拒绝启动，避免意外以空口令开放文档。
+
 如需显式指定端口、文档目录或监听地址：
 
 ```bash
@@ -70,7 +92,7 @@ npx docnest serve --port 3000 --docs-dir docs --host 127.0.0.1
 
 ## 嵌入现有 Node 服务
 
-需要接入项目自己的鉴权或文档来源时，在加载 `docnest/server` 前注入中间件和文档存储适配器，然后使用导出的 Express/Socket.IO 实例：
+需要接入项目自己的鉴权或文档来源时，在加载 `docnest/server` 前注入中间件和文档存储适配器，然后使用导出的 Express/Socket.IO 实例。项目若不使用上面的内置单口令授权，仍可在这里接入自己的访问控制：
 
 ```js
 globalThis.__DOCNEST_BEFORE_DOCUMENT_ROUTES__ = [projectAuthMiddleware]
@@ -82,7 +104,7 @@ io.use(projectSocketAuth)
 startServer(3000)
 ```
 
-存储适配器实现 `name`、`readDir`、`fileExists`、`readFile`、`readAsset`，可选实现 `ready`；这样文档内容仍由宿主项目提供，DocNest 只负责展示和交互。
+存储适配器实现 `name`、`readDir`、`fileExists`、`readFile`、`readAsset`，可选实现 `ready`；这样文档内容仍由宿主项目提供，DocNest 负责展示、交互和可选的单口令授权。
 
 ## 静态构建中的文档附件
 
