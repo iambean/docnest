@@ -136,3 +136,16 @@ npm run pack:check
 ```
 
 最低支持 Node.js 20，验证 Node.js 20 和 22。
+
+## 发布规范
+
+DocNest 的 GitHub Release 和 npm 发布统一由 GitHub Actions 完成，不在本地直接执行 `npm publish`。
+
+发布新版本时：
+
+1. 更新 `package.json` 和 `package-lock.json` 的版本号，并运行 `npm test` 与 `npm run pack:check`。
+2. 将版本提交推送到 `main`。
+3. 在 `main` 上创建与包版本一致的标签，例如 `v0.1.13`。
+4. 推送该标签：`git push origin v0.1.13`。
+
+标签推送后，`.github/workflows/publish.yml` 会校验标签与包版本一致，使用 npm OIDC 发布公开包，并自动创建名为 `DocNest v0.1.13` 的 GitHub Release。远程仓库只保留 `main` 分支，发布标签不需要推送临时开发分支。
