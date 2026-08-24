@@ -78,6 +78,8 @@ export default defineConfig({
   auth: {
     enabled: true,
     passphrase: '请替换为项目自己的长口令',
+    // 服务通过反向代理挂载在子路径时填写，例如 /documents；默认跳转到 /。
+    redirectPrefix: '',
     stateFile: '.docnest/auth.json',
     localStorageKey: 'my-project:auth-passphrase',
     sessionTtlMinutes: 24 * 60,
@@ -90,6 +92,8 @@ export default defineConfig({
 按极简模式约定，前端会把可回填的口令永久保存到浏览器 `localStorage`（不写入 URL）；每次打开或刷新文档页面，前端都会把当前缓存的口令交给后台重新校验。校验失败会回到口令页，校验成功才会继续打开当前页面；输入页会保留跳转前的目标地址，错误口令会停留在输入页。由于 `localStorage` 是浏览器本地明文存储，请只在受信任的浏览器环境使用此模式。
 `localStorageKey` 可选，用于为不同宿主项目隔离浏览器存储键。内置授权不提供“修改口令”或“退出”按钮；需要更换口令时，停止服务、删除 `stateFile`，修改配置中的 `passphrase` 后重新启动。
 建议把 `.docnest/` 加入宿主项目的 `.gitignore`，并为口令状态文件设置仅当前用户可读写的权限。
+
+如果 DocNest 由反向代理挂载在 `/documents/` 等子路径下，将 `auth.redirectPrefix` 配置为 `/documents`。登录页会把原始文档目标写成带此前缀的路径，口令登录后的服务端跳转也会使用同一前缀；不配置时保持跳转到 `/` 的默认行为。
 
 授权开启但既没有状态文件，也没有初始 `passphrase` 时，DocNest 会拒绝启动，避免意外以空口令开放文档。
 

@@ -280,6 +280,19 @@ function safeNextPath(value) {
   return value;
 }
 
+function authRedirectTarget(value) {
+  const nextPath = safeNextPath(value);
+  const prefix = typeof AUTH_CONFIG.redirectPrefix === 'string' ? AUTH_CONFIG.redirectPrefix : '';
+  if (
+    !prefix ||
+    nextPath === prefix ||
+    nextPath.startsWith(`${prefix}/`) ||
+    nextPath.startsWith(`${prefix}?`) ||
+    nextPath.startsWith(`${prefix}#`)
+  ) return nextPath;
+  return nextPath === '/' ? `${prefix}/` : `${prefix}${nextPath}`;
+}
+
 function setAuthCookie(res, token) {
   const maxAge = AUTH_MANAGER.sessionMaxAgeSeconds;
   res.setHeader(
@@ -301,7 +314,7 @@ function wantsJson(req) {
 
 function renderLoginPage(res, nextPath, error, status = 200) {
   return res.status(status).render('login', {
-    nextPath: safeNextPath(nextPath),
+    nextPath: authRedirectTarget(nextPath),
     error: error || '',
     assetVersion: ASSET_VERSION,
   });
@@ -325,7 +338,7 @@ app.post('/auth/verify', (req, res) => {
 
 app.post('/auth/login', (req, res) => {
   if (!BUILT_IN_AUTH_ENABLED) return res.redirect('/');
-  const nextPath = safeNextPath(req.body?.next);
+  const nextPath = authRedirectTarget(req.body?.next);
   const token = AUTH_MANAGER.createSession(String(req.body?.passphrase || ''));
   if (!token) return renderLoginPage(res, nextPath, '口令不正确，请重试。', 401);
   setAuthCookie(res, token);

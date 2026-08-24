@@ -36,6 +36,8 @@ export default defineConfig({
     enabled: false,
     // 仅首次启动且授权状态文件不存在时使用；更换口令需手动删除状态文件后重启。
     passphrase: '',
+    // 通过反向代理挂载在子路径时，为登录成功后的目标补此前缀；默认空值跳转到根路径。
+    redirectPrefix: '',
     stateFile: '.docnest/auth.json',
     // 前端 localStorage 的键；口令会永久保存在浏览器本地，直到手动清除或口令失效。
     localStorageKey: 'my-project:auth-passphrase',

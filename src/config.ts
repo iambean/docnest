@@ -44,6 +44,11 @@ export type DocNestConfig = {
   auth?: {
     enabled?: boolean;
     passphrase?: string;
+    /**
+     * Prefix to add to authentication return targets when the service is
+     * mounted below a reverse-proxy path, for example `/documents`.
+     */
+    redirectPrefix?: string;
     stateFile?: string;
     localStorageKey?: string;
     sessionTtlMinutes?: number;
@@ -69,6 +74,7 @@ export type ResolvedDocNestConfig = Required<DocNestConfig> & {
   auth: {
     enabled: boolean;
     passphrase: string;
+    redirectPrefix: string;
     stateFile: string;
     localStorageKey: string;
     sessionTtlMinutes: number;
@@ -104,6 +110,21 @@ function normalizePort(value: unknown, fallback: number): number {
 function normalizePositiveNumber(value: unknown, fallback: number): number {
   const normalized = Number(value);
   return Number.isFinite(normalized) && normalized > 0 ? normalized : fallback;
+}
+
+function normalizeRedirectPrefix(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  const normalized = value.trim();
+  if (
+    !normalized ||
+    normalized === '/' ||
+    !normalized.startsWith('/') ||
+    normalized.startsWith('//') ||
+    normalized.includes('//') ||
+    normalized.includes('\\') ||
+    /[\r\n?#]/.test(normalized)
+  ) return '';
+  return normalized.replace(/\/+$/, '') || '';
 }
 
 function normalizeThemeName(value: unknown): (typeof DOCNEST_THEME_NAMES)[number] | null {
@@ -177,6 +198,7 @@ export async function loadConfig(projectRoot = process.cwd()): Promise<ResolvedD
     auth: {
       enabled: auth.enabled ?? false,
       passphrase: typeof auth.passphrase === 'string' ? auth.passphrase : '',
+      redirectPrefix: normalizeRedirectPrefix(auth.redirectPrefix),
       stateFile: path.resolve(projectRoot, auth.stateFile?.trim() || '.docnest/auth.json'),
       localStorageKey: authLocalStorageKey,
       sessionTtlMinutes: normalizePositiveNumber(auth.sessionTtlMinutes, 24 * 60),

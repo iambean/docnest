@@ -27,6 +27,7 @@ test('defaults to project docs and derives a neutral site identity', async () =>
     'swiss-manual',
   ])
   assert.equal(config.auth.enabled, false)
+  assert.equal(config.auth.redirectPrefix, '')
   assert.equal(config.auth.stateFile, path.join(projectRoot, '.docnest/auth.json'))
   assert.equal(config.auth.localStorageKey, 'docnest:demo-project:auth-passphrase')
   assert.equal(config.auth.sessionTtlMinutes, 24 * 60)
@@ -66,6 +67,7 @@ test('loads project-local branding, root order, server and reading policy config
       auth: {
         enabled: true,
         passphrase: '初始口令',
+        redirectPrefix: '/documents/',
         stateFile: '.runtime/docnest-auth.json',
         localStorageKey: 'project-auth-passphrase',
         sessionTtlMinutes: 90,
@@ -84,6 +86,7 @@ test('loads project-local branding, root order, server and reading policy config
   assert.deepEqual(config.auth, {
     enabled: true,
     passphrase: '初始口令',
+    redirectPrefix: '/documents',
     stateFile: path.join(projectRoot, '.runtime/docnest-auth.json'),
     localStorageKey: 'project-auth-passphrase',
     sessionTtlMinutes: 90,

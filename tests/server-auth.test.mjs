@@ -155,3 +155,56 @@ test('configured single-passphrase auth protects documents and verifies every en
   const state = await readFile(path.join(root, '.docnest', 'auth.json'), 'utf8')
   assert.doesNotMatch(state, /旧口令/)
 })
+
+test('configured redirect prefix keeps auth targets under a mounted document path', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-server-auth-prefix-'))
+  await writeFile(path.join(root, 'package.json'), JSON.stringify({ name: 'auth-prefix-fixture' }))
+  await writeFile(path.join(root, 'docnest.config.mjs'), `export default {
+    docsDir: 'docs',
+    auth: {
+      enabled: true,
+      passphrase: '挂载口令',
+      redirectPrefix: '/documents/',
+      stateFile: '.docnest/auth.json',
+      sessionTtlMinutes: 60,
+    },
+    server: { openBrowser: false },
+  }`)
+  await mkdir(path.join(root, 'docs'))
+  await writeFile(path.join(root, 'docs', 'README.md'), '# 挂载文档\n')
+
+  const port = await findFreePort()
+  const child = spawn(process.execPath, [cliPath, 'serve', '--no-open', '--port', String(port)], {
+    cwd: root,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  t.after(async () => {
+    if (child.exitCode !== null) return
+    child.kill('SIGTERM')
+    await once(child, 'exit').catch(() => undefined)
+  })
+
+  await waitForReady(port)
+
+  const anonymousDoc = await request(port, '/doc?path=README.md')
+  assert.equal(anonymousDoc.status, 302)
+  const loginLocation = anonymousDoc.headers.get('location') || ''
+  assert.match(loginLocation, /^\/login\?next=/)
+
+  const loginPage = await request(port, loginLocation)
+  assert.equal(loginPage.status, 200)
+  const loginHtml = await loginPage.text()
+  assert.match(loginHtml, /name="next" value="\/documents\/doc\?path=README\.md"/)
+
+  const formLogin = await request(port, '/auth/login', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ passphrase: '挂载口令', next: '/doc?path=README.md' }),
+  })
+  assert.equal(formLogin.status, 302)
+  assert.equal(formLogin.headers.get('location'), '/documents/doc?path=README.md')
+
+  const directLoginPage = await request(port, '/login')
+  assert.equal(directLoginPage.status, 200)
+  assert.match(await directLoginPage.text(), /name="next" value="\/documents\/"/)
+})
