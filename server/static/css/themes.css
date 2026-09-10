@@ -2,8 +2,9 @@
  * DocNest theme profiles
  *
  * One semantic DOM, five visual systems. The original DocNest rules remain
- * the Slate Modern baseline; this file owns theme tokens and deliberate layout
- * variations without forking templates or client behavior.
+ * the Slate Modern baseline for page geometry (main-content padding,
+ * doc-layout max-width/gap, markdown reading width). This file owns theme
+ * tokens and visual character without forking templates or client behavior.
  */
 
 :root {
@@ -19,6 +20,7 @@
   --doc-code-bg: #f6f7f8;
   --doc-code-text: #24262b;
   --doc-header-height: auto;
+  /* Shared with Slate Modern; theme profiles must not override page geometry. */
   --doc-reading-width: 1024px;
 }
 
@@ -405,7 +407,6 @@ body[data-doc-theme="editorial-atlas"] {
     "Microsoft YaHei", sans-serif;
   --doc-font-reading: "Songti SC", SimSun, "Noto Serif CJK SC", serif;
   --doc-font-display: "Songti SC", SimSun, "Noto Serif CJK SC", serif;
-  --doc-reading-width: 860px;
 }
 
 body[data-doc-theme="editorial-atlas"][data-theme="dark"] {
@@ -452,18 +453,7 @@ body[data-doc-theme="editorial-atlas"] .sidebar {
   border-right-color: var(--doc-rule-strong);
 }
 
-body[data-doc-theme="editorial-atlas"] .main-content {
-  padding: clamp(2rem, 4vw, 4.75rem) clamp(1.5rem, 5vw, 5.5rem);
-  background: var(--linear-bg);
-}
-
-body[data-doc-theme="editorial-atlas"] .doc-layout {
-  width: min(1240px, 100%);
-  gap: 42px;
-}
-
 body[data-doc-theme="editorial-atlas"] .markdown-body {
-  width: min(var(--doc-reading-width), 100%);
   background: transparent;
   font-size: 1rem;
   line-height: 1.9;
@@ -520,7 +510,6 @@ body[data-doc-theme="precision-index"] {
     "Microsoft YaHei", sans-serif;
   --doc-font-reading: var(--doc-font-ui);
   --doc-font-display: var(--doc-font-ui);
-  --doc-reading-width: 980px;
 }
 
 body[data-doc-theme="precision-index"][data-theme="dark"] {
@@ -597,28 +586,17 @@ body[data-doc-theme="precision-index"] .file-link.active {
   background: var(--doc-surface-raised);
 }
 
-body[data-doc-theme="precision-index"] .main-content {
-  padding: 0;
-  background: var(--linear-bg);
-}
-
 body[data-doc-theme="precision-index"] .breadcrumbs {
-  margin: 0;
-  padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--doc-rule-strong);
   background: var(--linear-bg-subtle);
   font-size: 0.6875rem;
 }
 
 body[data-doc-theme="precision-index"] .doc-layout {
-  width: 100%;
-  gap: 0;
   background: var(--doc-surface-raised);
 }
 
 body[data-doc-theme="precision-index"] .markdown-body {
-  width: min(var(--doc-reading-width), 100%);
-  padding: clamp(2.5rem, 5vw, 5rem);
   border-right: 1px solid var(--doc-rule-strong);
   font-size: 0.9rem;
   line-height: 1.75;
@@ -651,11 +629,6 @@ body[data-doc-theme="precision-index"] .markdown-body h2 {
 }
 
 body[data-doc-theme="precision-index"] .doc-toc {
-  top: 0;
-  width: 216px;
-  flex-basis: 216px;
-  max-height: calc(100vh - 54px);
-  padding: 1.25rem;
   border: 0;
   border-radius: 0;
   background: var(--linear-bg-subtle);
@@ -664,12 +637,6 @@ body[data-doc-theme="precision-index"] .doc-toc {
 body[data-doc-theme="precision-index"] .doc-toc-title {
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-body[data-doc-theme="precision-index"] .dir-listing-page,
-body[data-doc-theme="precision-index"] .welcome {
-  margin: 0;
-  padding: clamp(2rem, 5vw, 5rem);
 }
 
 /* Theme 04: Archive Room */
@@ -693,7 +660,6 @@ body[data-doc-theme="archive-room"] {
     "Microsoft YaHei", sans-serif;
   --doc-font-reading: "Songti SC", SimSun, "Noto Serif CJK SC", serif;
   --doc-font-display: "Songti SC", SimSun, "Noto Serif CJK SC", serif;
-  --doc-reading-width: 900px;
 }
 
 body[data-doc-theme="archive-room"][data-theme="dark"] {
@@ -761,7 +727,6 @@ body[data-doc-theme="archive-room"][data-theme="dark"] .file-link.active {
 }
 
 body[data-doc-theme="archive-room"] .main-content {
-  padding: clamp(2rem, 4vw, 4.5rem);
   background-color: var(--linear-bg);
   background-image:
     linear-gradient(rgba(93, 96, 85, 0.045) 1px, transparent 1px),
@@ -769,14 +734,8 @@ body[data-doc-theme="archive-room"] .main-content {
   background-size: 24px 24px;
 }
 
-body[data-doc-theme="archive-room"] .doc-layout {
-  width: min(1280px, 100%);
-  gap: 34px;
-}
-
 body[data-doc-theme="archive-room"] .markdown-body {
-  width: min(var(--doc-reading-width), 100%);
-  padding: clamp(1.5rem, 3vw, 3rem);
+  padding: 1.5rem 1.5rem 3rem;
   border: 1px solid var(--doc-rule-strong);
   background: var(--doc-surface-raised);
   box-shadow: 7px 7px 0 var(--linear-border);
@@ -836,7 +795,6 @@ body[data-doc-theme="swiss-manual"] {
     "Microsoft YaHei", sans-serif;
   --doc-font-reading: var(--doc-font-ui);
   --doc-font-display: var(--doc-font-ui);
-  --doc-reading-width: 960px;
 }
 
 body[data-doc-theme="swiss-manual"][data-theme="dark"] {
@@ -939,27 +897,13 @@ body[data-doc-theme="swiss-manual"] .file-link.active {
   font-weight: 800;
 }
 
-body[data-doc-theme="swiss-manual"] .main-content {
-  padding: 0;
-  background: var(--doc-surface-raised);
-}
-
 body[data-doc-theme="swiss-manual"] .breadcrumbs {
-  margin: 0;
-  padding: 0.85rem 1.5rem;
   border-bottom: 1px solid var(--doc-rule-strong);
   background: var(--linear-bg-subtle);
   font-size: 0.65rem;
 }
 
-body[data-doc-theme="swiss-manual"] .doc-layout {
-  width: 100%;
-  gap: 0;
-}
-
 body[data-doc-theme="swiss-manual"] .markdown-body {
-  width: min(var(--doc-reading-width), 100%);
-  padding: clamp(2.5rem, 6vw, 6rem);
   border-right: 1px solid var(--doc-rule-strong);
   font-size: 0.95rem;
   line-height: 1.72;
@@ -1000,20 +944,9 @@ body[data-doc-theme="swiss-manual"] .markdown-body blockquote {
 }
 
 body[data-doc-theme="swiss-manual"] .doc-toc {
-  top: 0;
-  width: 220px;
-  flex-basis: 220px;
-  max-height: calc(100vh - 72px);
-  padding: 1.25rem;
   border: 0;
   border-radius: 0;
   background: var(--linear-bg-subtle);
-}
-
-body[data-doc-theme="swiss-manual"] .dir-listing-page,
-body[data-doc-theme="swiss-manual"] .welcome {
-  margin: 0;
-  padding: clamp(2rem, 6vw, 6rem);
 }
 
 /* Shared component refinements for the four independent profiles. */
@@ -1206,24 +1139,9 @@ body[data-doc-theme="swiss-manual"].not-found-page .deep-space-404__code {
     overflow-y: auto;
   }
 
-  body[data-doc-theme="editorial-atlas"] .main-content,
-  body[data-doc-theme="archive-room"] .main-content {
-    padding: 1.25rem;
-  }
-
   body[data-doc-theme="archive-room"] .markdown-body {
     padding: 1.25rem;
     box-shadow: 4px 4px 0 var(--linear-border);
-  }
-
-  body[data-doc-theme="precision-index"] .main-content,
-  body[data-doc-theme="swiss-manual"] .main-content {
-    padding: 0;
-  }
-
-  body[data-doc-theme="precision-index"] .markdown-body,
-  body[data-doc-theme="swiss-manual"] .markdown-body {
-    padding: 1.25rem;
   }
 
   body[data-doc-theme="precision-index"] .markdown-body h1,

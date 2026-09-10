@@ -8,6 +8,41 @@ function isDocNestRestrictedMode() {
   return !!(window.DOCNEST_CONFIG && window.DOCNEST_CONFIG.restrictedMode === true);
 }
 
+function parseSvgAbsoluteDimension(value) {
+  if (typeof value !== 'string' || !/^\s*\d*\.?\d+(?:e[+-]?\d+)?(?:px)?\s*$/i.test(value)) {
+    return null;
+  }
+
+  const dimension = Number.parseFloat(value);
+  return Number.isFinite(dimension) && dimension > 0 ? dimension : null;
+}
+
+function getDiagramIntrinsicDimensions(svgElement) {
+  const viewBox = svgElement.getAttribute('viewBox');
+  if (viewBox) {
+    const parts = viewBox.trim().split(/[\s,]+/).map(Number);
+    const viewBoxWidth = parts[2];
+    const viewBoxHeight = parts[3];
+    if (
+      parts.length === 4 &&
+      parts.every(Number.isFinite) &&
+      viewBoxWidth > 0 &&
+      viewBoxHeight > 0
+    ) {
+      // viewBox 是图表的实际坐标范围，优先于 Mermaid 的 width="100%"。
+      return { width: viewBoxWidth, height: viewBoxHeight };
+    }
+  }
+
+  const width = parseSvgAbsoluteDimension(svgElement.getAttribute('width'));
+  const height = parseSvgAbsoluteDimension(svgElement.getAttribute('height'));
+  if (width && height) return { width, height };
+  if (width) return { width, height: width * 0.75 };
+  if (height) return { width: height * (4 / 3), height };
+
+  return { width: 800, height: 600 };
+}
+
 function setupDiagramViewer() {
   if (isDocNestRestrictedMode()) return;
   const diagrams = document.querySelectorAll('.markdown-body .mermaid');
@@ -49,39 +84,16 @@ function openDiagramViewer(svgElement) {
   
   if (!viewer || !container) return;
   
-  // 获取原始 SVG 的尺寸
-  let originalWidth = parseFloat(svgElement.getAttribute('width'));
-  let originalHeight = parseFloat(svgElement.getAttribute('height'));
-  
-  // 如果没有 width/height，尝试从 viewBox 获取
-  if (!originalWidth || !originalHeight || isNaN(originalWidth) || isNaN(originalHeight)) {
-    const viewBox = svgElement.getAttribute('viewBox');
-    if (viewBox) {
-      const parts = viewBox.split(/\s+/);
-      if (parts.length >= 4) {
-        originalWidth = parseFloat(parts[2]) || 800;
-        originalHeight = parseFloat(parts[3]) || 600;
-      }
-    }
-  }
-  
-  // 如果还是没有，使用默认值
-  if (!originalWidth || !originalHeight || isNaN(originalWidth) || isNaN(originalHeight)) {
-    originalWidth = 800;
-    originalHeight = 600;
-  }
+  // viewBox 才是图表的实际尺寸；不能把 Mermaid 的 width="100%" 解析成 100。
+  const { width: originalWidth, height: originalHeight } = getDiagramIntrinsicDimensions(svgElement);
   
   // 设置 SVG 样式，确保充分利用空间
   svgElement.setAttribute('class', 'diagram-viewer-svg');
   // 清除之前的样式，但保留必要的属性
   svgElement.removeAttribute('style');
-  // 确保 SVG 有正确的属性
-  if (!svgElement.getAttribute('width')) {
-    svgElement.setAttribute('width', originalWidth);
-  }
-  if (!svgElement.getAttribute('height')) {
-    svgElement.setAttribute('height', originalHeight);
-  }
+  // 查看器需要固定的像素基准；内嵌图仍然保持响应式，不会被这个克隆影响。
+  svgElement.setAttribute('width', originalWidth);
+  svgElement.setAttribute('height', originalHeight);
   
   // 包装元素本身还包含边界 padding，因此适配比例必须把容器 padding 和图表边界一并算入。
   const padding = 40;
@@ -205,9 +217,8 @@ function resetDiagramZoom() {
   const wrapper = container.querySelector('.diagram-viewer-svg-wrapper');
   if (!wrapper) return;
   
-  // 获取原始尺寸
-  const originalWidth = parseFloat(currentSvg.style.width) || parseFloat(currentSvg.getAttribute('width')) || 800;
-  const originalHeight = parseFloat(currentSvg.style.height) || parseFloat(currentSvg.getAttribute('height')) || 600;
+  // 始终从统一的尺寸解析逻辑获取原始尺寸，避免缩放/重置再次误读百分比宽度。
+  const { width: originalWidth, height: originalHeight } = getDiagramIntrinsicDimensions(currentSvg);
   
   const padding = 40; // 边界 padding 大小（像素）
   currentZoom = defaultZoom;

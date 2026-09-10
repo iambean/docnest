@@ -8,9 +8,8 @@ function zoomDiagram(direction) {
   const wrapper = container.querySelector('.diagram-viewer-svg-wrapper');
   if (!wrapper) return;
   
-  // 获取原始尺寸
-  const originalWidth = parseFloat(currentSvg.style.width) || parseFloat(currentSvg.getAttribute('width')) || 800;
-  const originalHeight = parseFloat(currentSvg.style.height) || parseFloat(currentSvg.getAttribute('height')) || 600;
+  // 与查看器使用同一套尺寸解析逻辑，不能把 width="100%" 解析成 100。
+  const { width: originalWidth, height: originalHeight } = getDiagramIntrinsicDimensions(currentSvg);
   
   // 边界 padding 大小（与 diagram-viewer.js 中保持一致）
   const padding = 40;

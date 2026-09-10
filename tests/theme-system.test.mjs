@@ -68,6 +68,39 @@ test('Swiss Manual keeps document titles within the shared theme scale', () => {
   )
 })
 
+test('theme profiles share Slate Modern page geometry', async () => {
+  const baseStyles = await readFile(
+    new URL('../server/static/css/styles.css', import.meta.url),
+    'utf8',
+  )
+  assert.match(themeStyles, /:root \{[\s\S]*?--doc-reading-width: 1024px;/)
+  assert.equal(
+    [...themeStyles.matchAll(/--doc-reading-width:/g)].length,
+    1,
+    'reading width should be defined once, not per theme',
+  )
+  assert.match(
+    baseStyles,
+    /\.markdown-body \{[\s\S]*?width:\s*min\(var\(--doc-reading-width, 1024px\), 100%\);/,
+  )
+
+  for (const themeName of themeNames) {
+    if (themeName === 'slate-modern') continue
+    assert.doesNotMatch(
+      themeStyles,
+      new RegExp(`body\\[data-doc-theme="${themeName}"\\] \\.main-content \\{[^}]*padding:`),
+    )
+    assert.doesNotMatch(
+      themeStyles,
+      new RegExp(`body\\[data-doc-theme="${themeName}"\\] \\.doc-layout \\{[^}]*(?:width:|gap:)`),
+    )
+    assert.doesNotMatch(
+      themeStyles,
+      new RegExp(`body\\[data-doc-theme="${themeName}"\\] \\.markdown-body \\{[^}]*[^\\w-]width:`),
+    )
+  }
+})
+
 test('theme bootstrap keeps the page hidden until the stored theme reaches the body', () => {
   assert.match(
     themeStyles,
