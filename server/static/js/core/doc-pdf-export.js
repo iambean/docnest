@@ -93,9 +93,40 @@
   function createExportRoot(article) {
     var root = document.createElement('div');
     root.className = EXPORT_CLASS;
+    root.setAttribute('data-doc-theme', document.body.getAttribute('data-doc-theme') || 'slate-modern');
+    root.setAttribute('data-theme', 'light');
 
     var clone = article.cloneNode(true);
     removeTransientNodes(clone);
+    // html2canvas may paint closed <details> descendants without reserving their
+    // height. Export static, expanded sections while leaving the live page alone.
+    Array.prototype.slice.call(clone.querySelectorAll('details')).reverse().forEach(function(details) {
+      var section = document.createElement('section');
+      Array.prototype.slice.call(details.attributes).forEach(function(attribute) {
+        if (attribute.name !== 'open') section.setAttribute(attribute.name, attribute.value);
+      });
+      section.style.display = 'block';
+      section.style.height = 'auto';
+      section.style.maxHeight = 'none';
+      section.style.overflow = 'visible';
+      section.style.margin = '1em 0';
+      while (details.firstChild) {
+        var child = details.firstChild;
+        if (child.tagName === 'SUMMARY') {
+          var heading = document.createElement('div');
+          heading.className = 'doc-pdf-section-title';
+          heading.style.fontWeight = '700';
+          heading.style.marginBottom = '12px';
+          while (child.firstChild) heading.appendChild(child.firstChild);
+          section.appendChild(heading);
+          details.removeChild(child);
+        } else {
+          section.appendChild(child);
+        }
+      }
+      details.parentNode.replaceChild(section, details);
+    });
+    clone.querySelectorAll('img').forEach(function(img) { img.loading = 'eager'; });
     root.appendChild(clone);
     document.body.appendChild(root);
 
@@ -137,18 +168,60 @@
     return breakpoints;
   }
 
+  function collectProtectedRegions(root, canvasScale) {
+    var rootRect = root.getBoundingClientRect();
+    var regions = [];
+    root.querySelectorAll('img, svg, canvas, figure, .mermaid').forEach(function(node) {
+      var rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      regions.push({
+        top: Math.max(0, Math.floor((rect.top - rootRect.top) * canvasScale)),
+        bottom: Math.max(0, Math.ceil((rect.bottom - rootRect.top) * canvasScale)),
+      });
+    });
+    regions.sort(function(a, b) { return a.top - b.top || b.bottom - a.bottom; });
+    var merged = [];
+    regions.forEach(function(region) {
+      var last = merged[merged.length - 1];
+      if (last && region.top < last.bottom) {
+        last.bottom = Math.max(last.bottom, region.bottom);
+      } else {
+        merged.push(region);
+      }
+    });
+    return merged;
+  }
+
   function cleanupExportRoot(root) {
     if (root && root.parentNode) {
       root.parentNode.removeChild(root);
     }
   }
 
-  function waitForExportReady() {
+  function waitForExportReady(root) {
     var fontReady = document.fonts && document.fonts.ready
       ? document.fonts.ready.catch(function() {})
       : Promise.resolve();
 
-    return fontReady.then(function() {
+    var imagesReady = Promise.all(Array.prototype.map.call(root.querySelectorAll('img'), function(img) {
+      if (img.complete) {
+        return img.naturalWidth > 0 ? Promise.resolve() : Promise.reject(new Error('文档图片加载失败'));
+      }
+      return new Promise(function(resolve, reject) {
+        var timer = setTimeout(function() { finish(new Error('等待文档图片超时')); }, 15000);
+        function finish(error) {
+          clearTimeout(timer);
+          img.removeEventListener('load', loaded);
+          img.removeEventListener('error', failed);
+          if (error) reject(error); else resolve();
+        }
+        function loaded() { finish(); }
+        function failed() { finish(new Error('文档图片加载失败')); }
+        img.addEventListener('load', loaded, { once: true });
+        img.addEventListener('error', failed, { once: true });
+      });
+    }));
+    return Promise.all([fontReady, imagesReady]).then(function() {
       return new Promise(function(resolve) {
         requestAnimationFrame(function() {
           requestAnimationFrame(resolve);
@@ -169,8 +242,9 @@
       logging: false,
       width: width,
       height: height,
-      windowWidth: width,
-      windowHeight: height,
+      // Keep vw/vh styles and media queries identical to the measured DOM.
+      windowWidth: window.innerWidth,
+      windowHeight: window.innerHeight,
       scrollX: 0,
       scrollY: 0,
     });
@@ -313,7 +387,7 @@
     return Math.max(minBreakY - startY, searchStartY + bestRow - startY);
   }
 
-  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark) {
+  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions) {
     var pageWidth = pdf.internal.pageSize.getWidth();
     var pageHeight = pdf.internal.pageSize.getHeight();
     var usableWidth = pageWidth - margin * 2;
@@ -338,6 +412,16 @@
           sliceHeight = findBestPageBreak(canvas, sourceCtx, offsetY, pageCanvasHeight);
         }
       }
+      sliceHeight = Math.min(sliceHeight, remainingHeight, pageCanvasHeight);
+      var sliceEnd = offsetY + sliceHeight;
+      (protectedRegions || []).forEach(function(region) {
+        if (region.top < sliceEnd && region.bottom > sliceEnd) {
+          // Move a fitting image to the next page even if this leaves whitespace.
+          // A taller-than-page image receives one whole, scaled PDF page.
+          sliceEnd = region.top > offsetY ? region.top : Math.min(region.bottom, canvas.height);
+        }
+      });
+      sliceHeight = Math.max(1, sliceEnd - offsetY);
       var pageCanvas = document.createElement('canvas');
       pageCanvas.width = canvas.width;
       pageCanvas.height = sliceHeight;
@@ -362,7 +446,7 @@
           context,
           pageCanvas.width,
           pageCanvas.height,
-          pageCanvasHeight,
+          Math.max(pageCanvasHeight, sliceHeight),
           watermark.text,
         );
       }
@@ -371,13 +455,14 @@
         pdf.addPage();
       }
 
-      var imageHeight = (sliceHeight * usableWidth) / canvas.width;
+      var imageWidth = Math.min(usableWidth, (usableHeight * canvas.width) / sliceHeight);
+      var imageHeight = (sliceHeight * imageWidth) / canvas.width;
       pdf.addImage(
         pageCanvas.toDataURL('image/png'),
         'PNG',
+        margin + (usableWidth - imageWidth) / 2,
         margin,
-        margin,
-        usableWidth,
+        imageWidth,
         imageHeight,
         undefined,
         'FAST'
@@ -586,13 +671,15 @@
           format: 'a4',
           compress: true,
         });
-        return waitForExportReady()
+        return waitForExportReady(exportRoot)
           .then(function() {
             return renderCanvas(exportRoot);
           })
           .then(function(canvas) {
-            var blockBreakpoints = collectBlockBreakpoints(exportRoot, canvas.height / Math.max(exportRoot.scrollHeight, 1));
-            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark);
+            var canvasScale = canvas.height / Math.max(exportRoot.scrollHeight, 1);
+            var blockBreakpoints = collectBlockBreakpoints(exportRoot, canvasScale);
+            var protectedRegions = collectProtectedRegions(exportRoot, canvasScale);
+            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions);
             pdf.save(getExportFileName() + '.pdf');
           })
           .finally(function() {

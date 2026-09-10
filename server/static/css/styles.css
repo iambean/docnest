@@ -179,13 +179,26 @@ body {
 }
 
 .doc-pdf-export-root {
+  /* PDF pages use a light paper palette, independently of the live reading mode. */
+  --linear-bg: #ffffff;
+  --linear-bg-subtle: #fafafa;
+  --linear-border: #e5e5e5;
+  --linear-text: #111111;
+  --linear-text-muted: #6b6b6b;
+  --linear-accent: #5e6ad2;
+  --linear-accent-hover: #4c57b8;
+  --doc-surface-raised: #ffffff;
+  --doc-rule-strong: #bfc0c5;
+  --doc-accent-soft: rgba(94, 106, 210, 0.12);
+  --doc-code-bg: #f6f7f8;
+  --doc-code-text: #24262b;
   position: absolute;
   left: 0;
   top: 0;
   width: 960px;
   padding: 24px 32px;
-  background: #ffffff;
-  color: #111111;
+  background: var(--doc-surface-raised);
+  color: var(--linear-text);
   z-index: -1;
   pointer-events: none;
   overflow: visible;
