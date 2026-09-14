@@ -7,15 +7,17 @@ const exporter = await readFile(new URL('../server/static/js/core/doc-pdf-export
 
 function loadExporter(document, window = {}) {
   vm.runInNewContext(exporter.replace('  function init() {', `
-    window.testPdf = { createExportRoot, addCanvasToPdf, renderCanvas };
+    window.testPdf = { createExportRoot, addCanvasToPdf, renderCanvas, getExportPageBackground };
     function init() {
   `), { window, document, Set, Promise, console })
   return window.testPdf
 }
 
-function paginate(protectedRegions, blockBreakpoints = []) {
+function paginate(protectedRegions, blockBreakpoints = [], pageBackground) {
   const canvases = new Map()
   const pages = []
+  const backgroundFills = []
+  const backgroundRects = []
   const document = {
     readyState: 'loading',
     addEventListener() {},
@@ -45,11 +47,15 @@ function paginate(protectedRegions, blockBreakpoints = []) {
   const pdf = {
     internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
     addPage() {},
+    setFillColor(...values) { backgroundFills.push(values) },
+    rect(...values) { backgroundRects.push(values) },
     addImage(id, format, x, y, width, height) {
       pages.push({ ...canvases.get(id).crop, x, y, width, renderedHeight: height })
     },
   }
-  loadExporter(document).addCanvasToPdf(pdf, source, 12, blockBreakpoints, null, protectedRegions)
+  loadExporter(document).addCanvasToPdf(pdf, source, 12, blockBreakpoints, null, protectedRegions, pageBackground)
+  pages.backgroundFills = backgroundFills
+  pages.backgroundRects = backgroundRects
   return pages
 }
 
@@ -83,6 +89,13 @@ test('an image exactly a page high is not fragmented or followed by an empty sli
   const pages = paginate([image], [image])
   assertWholeMedia(pages, image)
   assert.ok(pages.every(page => page.height > 0))
+})
+
+test('the selected export background fills every PDF page before the content margin', () => {
+  const pages = paginate([], [], { r: 250, g: 248, b: 242 })
+  assert.equal(pages.backgroundFills.length, pages.length)
+  assert.deepEqual(pages.backgroundFills, pages.map(() => [250, 248, 242]))
+  assert.deepEqual(pages.backgroundRects, pages.map(() => [0, 0, 210, 297, 'F']))
 })
 
 // A small DOM fixture exercises the real export clone transformation without a browser dependency.
@@ -158,6 +171,27 @@ test('export uses a light palette of the selected theme without changing the liv
   assert.equal(body.getAttribute('data-theme'), 'dark')
 })
 
+test('transparent export roots fall back to the selected theme surface color', () => {
+  const body = new Element('body')
+  const root = new Element('div')
+  const document = { readyState: 'loading', addEventListener() {}, createElement: tag => new Element(tag), body }
+  const window = {
+    getComputedStyle(target) {
+      if (target === root) {
+        return {
+          backgroundColor: 'rgba(0, 0, 0, 0)',
+          getPropertyValue(name) { return name === '--doc-surface-raised' ? '#faf8f2' : '' },
+        }
+      }
+      return { backgroundColor: 'rgb(255, 255, 255)', getPropertyValue() { return '' } }
+    },
+  }
+  const result = loadExporter(document, window).getExportPageBackground(root)
+  assert.equal(result.r, 250)
+  assert.equal(result.g, 248)
+  assert.equal(result.b, 242)
+})
+
 test('canvas rendering preserves the viewport used to measure page boundaries', () => {
   let options
   const document = { readyState: 'loading', addEventListener() {} }
@@ -165,6 +199,18 @@ test('canvas rendering preserves the viewport used to measure page boundaries', 
   loadExporter(document, window).renderCanvas({ scrollWidth: 960, offsetWidth: 960, scrollHeight: 6000, offsetHeight: 6000 })
   assert.equal(options.width, 960)
   assert.equal(options.height, 6000)
+  assert.equal(options.backgroundColor, 'rgb(255, 255, 255)')
   assert.equal(options.windowWidth, 1280, 'vw fonts and media queries must not reflow after DOM measurement')
   assert.equal(options.windowHeight, 720, 'vh-sized diagrams must keep the same geometry in the capture')
+})
+
+test('canvas rendering accepts the resolved page background color', () => {
+  let options
+  const document = { readyState: 'loading', addEventListener() {} }
+  const window = { html2canvas(root, value) { options = value } }
+  loadExporter(document, window).renderCanvas(
+    { scrollWidth: 960, offsetWidth: 960, scrollHeight: 600, offsetHeight: 600 },
+    { r: 250, g: 248, b: 242 },
+  )
+  assert.equal(options.backgroundColor, 'rgb(250, 248, 242)')
 })

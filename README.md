@@ -1,6 +1,6 @@
 # DocNest
 
-DocNest 是一个可复用的本地 Markdown 文档中心。文档内容归使用它的项目所有，DocNest 只提供查看、导航、Mermaid 图表、导出和本地 Watch 能力。
+DocNest 是一个可复用的本地 Markdown 文档中心。文档内容归使用它的项目所有，DocNest 只提供查看、导航、搜索、Mermaid 图表、导出和本地 Watch 能力。
 
 ## 快速接入
 
@@ -55,6 +55,16 @@ export default defineConfig({
 ```
 
 未配置 `appearance` 时使用 `slate-modern + auto`。旧配置中的 `current-docs` 会自动迁移到 `slate-modern`，正文视觉不会发生变化；旧版保存的 `markdown-theme` 明暗偏好也会自动迁移到新的项目级存储键。
+
+### 文档搜索
+
+普通阅读模式下，页面顶部提供文档搜索入口，也可以使用 `⌘K`（macOS）或
+`Ctrl K`（Windows/Linux）打开。搜索索引在首次打开搜索时才加载，覆盖文档标题、目录路径、标题层级、正文和代码块；中文按连续字符匹配，英文和带空格的查询按多个词匹配。结果按标题、目录和正文命中位置综合排序，并显示安全的文本摘要。
+
+搜索完全基于宿主项目自己的 Markdown 内容，不依赖 Algolia 或其他外部服务。动态服务通过同源
+`/search-index.json` 提供索引；静态站点需要把同一份响应保存为站点根目录的
+`search-index.json`，并保留页面上的静态站点标记，让结果链接指向 `/doc/<path>.html`。
+受限模式不生成搜索索引，也不显示搜索入口，避免摘要绕过阅读限制。
 
 PDF、页面水印和图表外带能力由一个开关统一控制，默认使用普通阅读模式：
 

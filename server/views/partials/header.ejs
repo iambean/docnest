@@ -13,6 +13,13 @@
     </div>
     <div class="header-meta">
       <div class="header-actions">
+        <% if (!docsRestrictedMode) { %>
+          <button type="button" id="doc-search-trigger" class="header-action-btn doc-search-trigger" aria-haspopup="dialog" aria-controls="doc-search-modal" title="搜索文档（⌘K / Ctrl K）">
+            <span class="doc-search-icon" aria-hidden="true">⌕</span>
+            <span class="header-action-text">搜索文档</span>
+            <kbd class="doc-search-shortcut" aria-label="打开搜索快捷键">⌘ K</kbd>
+          </button>
+        <% } %>
         <% if (typeof showPrintButton !== 'undefined' && showPrintButton && !docsRestrictedMode) { %>
           <button type="button" id="print-doc-btn" class="header-action-btn print-btn" title="打印当前文章">
             <span class="print-icon">🖨️</span>
@@ -58,6 +65,9 @@
     </div>
   </div>
 </header>
+<% if (!docsRestrictedMode) { %>
+  <script src="/static/js/core/doc-search.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : 'dev' %>"></script>
+<% } %>
 <% if (docsAuthEnabled) { %>
   <script src="/static/js/core/auth.js?v=<%= typeof assetVersion !== 'undefined' ? assetVersion : 'dev' %>"></script>
 <% } %>

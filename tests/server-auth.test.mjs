@@ -137,10 +137,18 @@ test('configured single-passphrase auth protects documents and verifies every en
   assert.equal(authorizedDoc.status, 200)
   const authorizedDocHtml = await authorizedDoc.text()
   assert.match(authorizedDocHtml, /受保护文档/)
+  assert.doesNotMatch(authorizedDocHtml, /doc-search-trigger/)
+  assert.doesNotMatch(authorizedDocHtml, /doc-search\.js/)
   assert.match(authorizedDocHtml, /docnest-page-watermark/)
   assert.doesNotMatch(authorizedDocHtml, /download-doc-pdf-btn/)
   assert.doesNotMatch(authorizedDocHtml, /doc-pdf-export\.js/)
   assert.doesNotMatch(authorizedDocHtml, /window\.print\(\)/)
+
+  const restrictedSearch = await request(port, '/search-index.json', {
+    headers: { accept: 'application/json', cookie: oldCookie },
+  })
+  assert.equal(restrictedSearch.status, 404)
+  assert.deepEqual(await restrictedSearch.json(), { ok: false, error: '搜索功能已关闭。' })
 
   const restrictedDiagram = await request(port, '/doc?path=流程图.md', {
     headers: { cookie: oldCookie },

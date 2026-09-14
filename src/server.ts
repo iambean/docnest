@@ -433,6 +433,116 @@ app.get('/ready', async (req, res) => {
 const beforeDocumentRoutes = globalThis.__DOCNEST_BEFORE_DOCUMENT_ROUTES__ || [];
 beforeDocumentRoutes.forEach((middleware) => app.use(middleware));
 
+const SEARCH_INDEX_VERSION = 1;
+let searchIndexCache = null;
+let searchIndexBuildPromise = null;
+
+function collectSearchDocPaths(tree, paths = []) {
+  for (const item of tree) {
+    if (item.type === 'directory') {
+      collectSearchDocPaths(item.children, paths);
+    } else if (item.type === 'file') {
+      paths.push(item.path);
+    }
+  }
+  return paths;
+}
+
+function normalizeSearchText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getSearchInlineText(token) {
+  if (!Array.isArray(token.children)) return token.content;
+  return token.children.map((child) => {
+    if (child.type === 'softbreak' || child.type === 'hardbreak') return ' ';
+    if (child.type === 'image') return child.content || '';
+    return String(child.content || '').replace(/<[^>]+>/g, ' ');
+  }).join('');
+}
+
+function createSearchDocument(docPath, markdown) {
+  const tokens = md.parse(markdown, {});
+  const headings = [];
+  const textParts = [];
+  let insideHeading = false;
+  let title = '';
+
+  for (const token of tokens) {
+    if (token.type === 'heading_open') {
+      insideHeading = true;
+      continue;
+    }
+    if (token.type === 'heading_close') {
+      insideHeading = false;
+      continue;
+    }
+    if (token.type === 'inline') {
+      const text = normalizeSearchText(getSearchInlineText(token));
+      if (!text) continue;
+      textParts.push(text);
+      if (insideHeading) {
+        headings.push(text);
+        if (!title) title = text;
+      }
+      continue;
+    }
+    if (token.type === 'code_block' || token.type === 'fence') {
+      const code = normalizeSearchText(token.content);
+      if (code) textParts.push(code);
+    }
+  }
+
+  const fallbackTitle = path.basename(docPath).replace(/\.(md|markdown)$/i, '');
+  return {
+    path: docPath,
+    title: title || fallbackTitle,
+    directory: path.posix.dirname(docPath) === '.' ? '' : path.posix.dirname(docPath),
+    headings,
+    text: normalizeSearchText(textParts.join(' ')),
+  };
+}
+
+async function buildSearchIndex() {
+  if (searchIndexCache) return searchIndexCache;
+  if (searchIndexBuildPromise) return searchIndexBuildPromise;
+
+  searchIndexBuildPromise = (async () => {
+    const tree = await getDocTree(DOCS_DIR);
+    const paths = collectSearchDocPaths(tree);
+    const documents = [];
+    for (const docPath of paths) {
+      const markdown = await storageReadFile(docPath);
+      documents.push(createSearchDocument(docPath, markdown));
+    }
+    return { version: SEARCH_INDEX_VERSION, documents };
+  })()
+    .then((index) => {
+      searchIndexCache = index;
+      return index;
+    })
+    .finally(() => {
+      searchIndexBuildPromise = null;
+    });
+
+  return searchIndexBuildPromise;
+}
+
+function invalidateSearchIndex() {
+  searchIndexCache = null;
+}
+
+app.get('/search-index.json', async (req, res) => {
+  if (DOCS_RESTRICTED_MODE) {
+    return res.status(404).json({ ok: false, error: '搜索功能已关闭。' });
+  }
+  try {
+    return res.json(await buildSearchIndex());
+  } catch (error) {
+    return res.status(503).json({ ok: false, error: `搜索索引暂不可用：${error.message}` });
+  }
+});
+
 // 获取文档目录树（排除隐藏目录和系统文件）
 async function getDocTree(dir, basePath = '') {
   const entries = await storageReadDir(basePath);
@@ -935,6 +1045,7 @@ if (WATCH_ENABLED && !injectedDocumentStore) {
     }
 
     const relativePath = normalizePath(filePath);
+    invalidateSearchIndex();
     console.log(`📝 文件已更新: ${relativePath}`);
 
     try {
@@ -959,6 +1070,7 @@ if (WATCH_ENABLED && !injectedDocumentStore) {
   watcher.on('add', (filePath) => {
     if (filePath.endsWith('.md')) {
       const relativePath = normalizePath(filePath);
+      invalidateSearchIndex();
       console.log(`➕ 新文件已添加: ${relativePath}`);
       io.emit('file-added', { path: relativePath });
     }
@@ -967,6 +1079,7 @@ if (WATCH_ENABLED && !injectedDocumentStore) {
   watcher.on('unlink', (filePath) => {
     if (filePath.endsWith('.md')) {
       const relativePath = normalizePath(filePath);
+      invalidateSearchIndex();
       console.log(`🗑️  文件已删除: ${relativePath}`);
       io.emit('file-deleted', { path: relativePath });
     }

@@ -230,15 +230,16 @@
     });
   }
 
-  function renderCanvas(root) {
+  function renderCanvas(root, pageBackground) {
     var width = Math.max(root.scrollWidth, root.offsetWidth, 960);
     var height = Math.max(root.scrollHeight, root.offsetHeight, 1);
+    var background = pageBackground || getExportPageBackground(root);
 
     return window.html2canvas(root, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff',
+      backgroundColor: 'rgb(' + background.r + ', ' + background.g + ', ' + background.b + ')',
       logging: false,
       width: width,
       height: height,
@@ -248,6 +249,90 @@
       scrollX: 0,
       scrollY: 0,
     });
+  }
+
+  function parseCssColor(value) {
+    var color = String(value || '').trim().toLowerCase();
+    if (!color || color === 'transparent') return null;
+
+    if (color.charAt(0) === '#') {
+      var hex = color.slice(1);
+      if (hex.length === 3 || hex.length === 4) {
+        hex = hex.split('').map(function(part) { return part + part; }).join('');
+      }
+      if (hex.length === 6 || hex.length === 8 && /^[0-9a-f]+$/.test(hex)) {
+        var hasAlpha = hex.length === 8;
+        if (!hasAlpha && !/^[0-9a-f]+$/.test(hex)) return null;
+        return {
+          r: parseInt(hex.slice(0, 2), 16),
+          g: parseInt(hex.slice(2, 4), 16),
+          b: parseInt(hex.slice(4, 6), 16),
+          alpha: hasAlpha ? parseInt(hex.slice(6, 8), 16) / 255 : 1,
+        };
+      }
+      return null;
+    }
+
+    var rgb = color.match(/^rgba?\(\s*([^,]+),\s*([^,]+),\s*([^,)]+)(?:,\s*([^)]+))?\s*\)$/);
+    if (!rgb) return null;
+
+    function channel(value) {
+      var parsed = parseFloat(value);
+      if (!Number.isFinite(parsed)) return null;
+      if (String(value).indexOf('%') !== -1) parsed = parsed * 2.55;
+      return Math.max(0, Math.min(255, Math.round(parsed)));
+    }
+
+    var red = channel(rgb[1]);
+    var green = channel(rgb[2]);
+    var blue = channel(rgb[3]);
+    var alpha = rgb[4] === undefined ? 1 : parseFloat(rgb[4]);
+    if (red === null || green === null || blue === null || !Number.isFinite(alpha)) return null;
+
+    return {
+      r: red,
+      g: green,
+      b: blue,
+      alpha: Math.max(0, Math.min(1, alpha)),
+    };
+  }
+
+  function readComputedColor(style, property) {
+    if (!style) return null;
+    var value = property.indexOf('--') === 0 && typeof style.getPropertyValue === 'function'
+      ? style.getPropertyValue(property)
+      : style[property] || (typeof style.getPropertyValue === 'function' ? style.getPropertyValue(property) : '');
+    return parseCssColor(value);
+  }
+
+  function withoutAlpha(color) {
+    return { r: color.r, g: color.g, b: color.b };
+  }
+
+  function blendColors(foreground, background) {
+    return {
+      r: Math.round(foreground.r * foreground.alpha + background.r * (1 - foreground.alpha)),
+      g: Math.round(foreground.g * foreground.alpha + background.g * (1 - foreground.alpha)),
+      b: Math.round(foreground.b * foreground.alpha + background.b * (1 - foreground.alpha)),
+    };
+  }
+
+  function getExportPageBackground(root) {
+    var getComputedStyle = typeof window.getComputedStyle === 'function'
+      ? window.getComputedStyle.bind(window)
+      : null;
+    var rootStyle = getComputedStyle ? getComputedStyle(root) : null;
+    var bodyStyle = getComputedStyle && document.body ? getComputedStyle(document.body) : null;
+    var themeSurface = readComputedColor(rootStyle, '--doc-surface-raised')
+      || readComputedColor(rootStyle, '--linear-bg')
+      || readComputedColor(bodyStyle, '--linear-bg')
+      || readComputedColor(bodyStyle, 'backgroundColor')
+      || parseCssColor('#ffffff');
+    var rootBackground = readComputedColor(rootStyle, 'backgroundColor');
+
+    if (!rootBackground || rootBackground.alpha === 0) return withoutAlpha(themeSurface);
+    if (rootBackground.alpha < 1) return blendColors(rootBackground, themeSurface);
+    return withoutAlpha(rootBackground);
   }
 
   function getCanvasContext(canvas) {
@@ -387,7 +472,15 @@
     return Math.max(minBreakY - startY, searchStartY + bestRow - startY);
   }
 
-  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions) {
+  function fillPdfPageBackground(pdf, pageBackground) {
+    if (!pageBackground || typeof pdf.setFillColor !== 'function' || typeof pdf.rect !== 'function') return;
+    var pageWidth = pdf.internal.pageSize.getWidth();
+    var pageHeight = pdf.internal.pageSize.getHeight();
+    pdf.setFillColor(pageBackground.r, pageBackground.g, pageBackground.b);
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+  }
+
+  function addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions, pageBackground) {
     var pageWidth = pdf.internal.pageSize.getWidth();
     var pageHeight = pdf.internal.pageSize.getHeight();
     var usableWidth = pageWidth - margin * 2;
@@ -454,6 +547,7 @@
       if (pageIndex > 0) {
         pdf.addPage();
       }
+      fillPdfPageBackground(pdf, pageBackground);
 
       var imageWidth = Math.min(usableWidth, (usableHeight * canvas.width) / sliceHeight);
       var imageHeight = (sliceHeight * imageWidth) / canvas.width;
@@ -671,15 +765,16 @@
           format: 'a4',
           compress: true,
         });
+        var pageBackground = getExportPageBackground(exportRoot);
         return waitForExportReady(exportRoot)
           .then(function() {
-            return renderCanvas(exportRoot);
+            return renderCanvas(exportRoot, pageBackground);
           })
           .then(function(canvas) {
             var canvasScale = canvas.height / Math.max(exportRoot.scrollHeight, 1);
             var blockBreakpoints = collectBlockBreakpoints(exportRoot, canvasScale);
             var protectedRegions = collectProtectedRegions(exportRoot, canvasScale);
-            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions);
+            addCanvasToPdf(pdf, canvas, margin, blockBreakpoints, watermark, protectedRegions, pageBackground);
             pdf.save(getExportFileName() + '.pdf');
           })
           .finally(function() {

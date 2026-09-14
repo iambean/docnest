@@ -47,7 +47,10 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
     restrictedMode: false,
   }`)
   await mkdir(path.join(root, 'docs'))
-  await writeFile(path.join(root, 'docs', 'README.md'), '# 可导出文档\n')
+  await writeFile(
+    path.join(root, 'docs', 'README.md'),
+    '# 可导出文档\n\n这是 **可搜索正文**，详见 [文档链接](./README.md)。\n',
+  )
   await mkdir(path.join(root, 'docs', '示例', '进阶'), { recursive: true })
   await writeFile(path.join(root, 'docs', '示例', 'README.md'), '# 示例目录\n')
   await writeFile(path.join(root, 'docs', '示例', '进阶', 'README.md'), '# 进阶目录\n')
@@ -67,6 +70,8 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
   const response = await fetch(`http://127.0.0.1:${port}/doc?path=README.md`)
   assert.equal(response.status, 200)
   const html = await response.text()
+  assert.match(html, /id="doc-search-trigger"/)
+  assert.match(html, /doc-search\.js/)
   assert.match(html, /id="print-doc-btn"/)
   assert.match(html, /id="download-doc-pdf-btn"/)
   assert.match(html, /doc-pdf-export\.js/)
@@ -74,6 +79,38 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
   assert.match(html, /diagram-download\.js/)
   assert.doesNotMatch(html, /docnest-page-watermark/)
   assert.doesNotMatch(html, /docnest-page-protected/)
+  assert.doesNotMatch(html, /data-docnest-static="true"/)
+
+  const searchIndex = await fetch(`http://127.0.0.1:${port}/search-index.json`, {
+    headers: { accept: 'application/json' },
+  })
+  assert.equal(searchIndex.status, 200)
+  const searchPayload = await searchIndex.json()
+  assert.equal(searchPayload.version, 1)
+  assert.deepEqual(
+    searchPayload.documents.map((document) => document.path),
+    ['README.md', '示例/README.md', '示例/进阶/README.md'],
+  )
+  assert.equal(searchPayload.documents[0].title, '可导出文档')
+  assert.deepEqual(searchPayload.documents[0].headings, ['可导出文档'])
+  assert.match(searchPayload.documents[0].text, /可导出文档.*可搜索正文.*文档链接/)
+  assert.doesNotMatch(searchPayload.documents[0].text, /\*\*|README\.md/)
+
+  await writeFile(path.join(root, 'docs', 'README.md'), '# 可导出文档\n\n搜索缓存失效校验\n')
+  let refreshedIndex = null
+  const refreshDeadline = Date.now() + 5_000
+  while (Date.now() < refreshDeadline) {
+    const refreshedResponse = await fetch(`http://127.0.0.1:${port}/search-index.json`, {
+      headers: { accept: 'application/json' },
+    })
+    const candidate = await refreshedResponse.json()
+    if (candidate.documents?.[0]?.text?.includes('搜索缓存失效校验')) {
+      refreshedIndex = candidate
+      break
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  assert.ok(refreshedIndex, 'Markdown changes should invalidate the cached search index')
 
   const index = await fetch(`http://127.0.0.1:${port}/`)
   assert.equal(index.status, 200)
