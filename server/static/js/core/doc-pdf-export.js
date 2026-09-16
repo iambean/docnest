@@ -568,25 +568,39 @@
   }
 
   function drawWatermarkPattern(context, width, height, referenceHeight, watermarkText) {
-    if (!watermarkText) return;
-    var tileWidth = width / 4;
-    var tileHeight = referenceHeight / 2;
-    var fontSize = Math.round(Math.min(tileWidth, tileHeight) * 0.38);
-    var startX = tileWidth / 2;
-    var startY = tileHeight / 2;
+    if (!watermarkText || width <= 0 || height <= 0 || referenceHeight <= 0) return;
+    var rotation = -Math.PI / 6;
+    var fontSize = Math.max(36, Math.min(56, Math.round(Math.min(width, referenceHeight) * 0.022)));
+    var font = '500 ' + fontSize + 'px "PingFang SC", "Microsoft YaHei", sans-serif';
 
     context.save();
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillStyle = 'rgba(30, 41, 59, 0.055)';
-    context.font = '700 ' + fontSize + 'px "PingFang SC", "Microsoft YaHei", sans-serif';
+    context.fillStyle = 'rgba(30, 41, 59, 0.04)';
+    context.font = font;
 
-    for (var y = startY; y < height + tileHeight; y += tileHeight) {
-      var rowOffsetX = Math.round(((y - startY) / tileHeight) % 2) * (tileWidth / 2);
-      for (var x = startX; x < width + tileWidth; x += tileWidth) {
+    // Use the actual rendered text width to calculate the repeat distance. The
+    // old fixed four-column grid was narrower than this long title, so adjacent
+    // watermarks collided and looked like a rough gray texture.
+    var textWidth = typeof context.measureText === 'function'
+      ? context.measureText(watermarkText).width
+      : fontSize * Math.max(watermarkText.length, 1) * 0.9;
+    var textHeight = fontSize;
+    var cos = Math.abs(Math.cos(rotation));
+    var sin = Math.abs(Math.sin(rotation));
+    var rotatedWidth = textWidth * cos + textHeight * sin;
+    var rotatedHeight = textWidth * sin + textHeight * cos;
+    var columnStep = Math.max(width / 3, rotatedWidth * 1.55);
+    var rowStep = Math.max(referenceHeight / 3, rotatedHeight * 2.75);
+    var startX = columnStep / 2;
+    var startY = rowStep / 2;
+
+    for (var rowIndex = 0, y = startY; y < height; rowIndex += 1, y += rowStep) {
+      var rowOffsetX = rowIndex % 2 === 1 ? columnStep / 2 : 0;
+      for (var x = startX; x + rowOffsetX < width; x += columnStep) {
         context.save();
         context.translate(x + rowOffsetX, y);
-        context.rotate(-Math.PI / 5.4);
+        context.rotate(rotation);
         context.fillText(watermarkText, 0, 0);
         context.restore();
       }

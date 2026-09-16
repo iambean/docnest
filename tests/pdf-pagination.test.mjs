@@ -7,7 +7,13 @@ const exporter = await readFile(new URL('../server/static/js/core/doc-pdf-export
 
 function loadExporter(document, window = {}) {
   vm.runInNewContext(exporter.replace('  function init() {', `
-    window.testPdf = { createExportRoot, addCanvasToPdf, renderCanvas, getExportPageBackground };
+    window.testPdf = {
+      createExportRoot,
+      addCanvasToPdf,
+      drawWatermarkPattern,
+      renderCanvas,
+      getExportPageBackground,
+    };
     function init() {
   `), { window, document, Set, Promise, console })
   return window.testPdf
@@ -96,6 +102,33 @@ test('the selected export background fills every PDF page before the content mar
   assert.equal(pages.backgroundFills.length, pages.length)
   assert.deepEqual(pages.backgroundFills, pages.map(() => [250, 248, 242]))
   assert.deepEqual(pages.backgroundRects, pages.map(() => [0, 0, 210, 297, 'F']))
+})
+
+test('watermarks keep long titles legible and separated', () => {
+  const placements = []
+  const context = {
+    fillStyle: '',
+    font: '',
+    save() {},
+    restore() {},
+    measureText() { return { width: 520 } },
+    translate(x, y) { placements.push({ x, y }) },
+    rotate() {},
+    fillText() {},
+  }
+  const document = { readyState: 'loading', addEventListener() {} }
+  loadExporter(document).drawWatermarkPattern(
+    context,
+    1860,
+    2700,
+    2700,
+    'emoX 文档中心（内部使用）',
+  )
+
+  assert.match(context.font, /^500 41px /)
+  assert.equal(context.fillStyle, 'rgba(30, 41, 59, 0.04)')
+  assert.equal(placements.length, 8)
+  assert.ok(placements.every(({ x, y }) => x >= 0 && x < 1860 && y >= 0 && y < 2700))
 })
 
 // A small DOM fixture exercises the real export clone transformation without a browser dependency.
