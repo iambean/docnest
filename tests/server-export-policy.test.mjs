@@ -54,6 +54,8 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
   await mkdir(path.join(root, 'docs', '示例', '进阶'), { recursive: true })
   await writeFile(path.join(root, 'docs', '示例', 'README.md'), '# 示例目录\n')
   await writeFile(path.join(root, 'docs', '示例', '进阶', 'README.md'), '# 进阶目录\n')
+  await mkdir(path.join(root, 'docs', '示例', '无README'), { recursive: true })
+  await writeFile(path.join(root, 'docs', '示例', '无README', '文档.md'), '# 无 README 的文档\n')
 
   const port = await findFreePort()
   const child = spawn(process.execPath, [cliPath, 'serve', '--no-open', '--port', String(port)], {
@@ -89,7 +91,7 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
   assert.equal(searchPayload.version, 1)
   assert.deepEqual(
     searchPayload.documents.map((document) => document.path),
-    ['README.md', '示例/README.md', '示例/进阶/README.md'],
+    ['README.md', '示例/README.md', '示例/进阶/README.md', '示例/无README/文档.md'],
   )
   assert.equal(searchPayload.documents[0].title, '可导出文档')
   assert.deepEqual(searchPayload.documents[0].headings, ['可导出文档'])
@@ -125,4 +127,26 @@ test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
     nestedDirectory.headers.get('location'),
     `/doc?path=${encodeURIComponent('示例/进阶/README.md')}`,
   )
+
+  const documentWithoutReadme = await fetch(
+    `http://127.0.0.1:${port}/doc?path=${encodeURIComponent('示例/无README/文档.md')}`,
+  )
+  assert.equal(documentWithoutReadme.status, 200)
+  const documentWithoutReadmeHtml = await documentWithoutReadme.text()
+  assert.ok(
+    documentWithoutReadmeHtml.includes(
+      `/dir?path=${encodeURIComponent('示例/无README')}`,
+    ),
+    'document breadcrumbs should link to the directory listing when README.md is absent',
+  )
+  assert.doesNotMatch(
+    documentWithoutReadmeHtml,
+    new RegExp(`/doc\\?path=${encodeURIComponent('示例/无README/README.md')}`),
+  )
+
+  const directoryWithoutReadme = await fetch(
+    `http://127.0.0.1:${port}/dir?path=${encodeURIComponent('示例/无README')}`,
+  )
+  assert.equal(directoryWithoutReadme.status, 200)
+  assert.match(await directoryWithoutReadme.text(), /文档\.md/)
 })

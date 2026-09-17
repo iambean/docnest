@@ -23,7 +23,8 @@
         crumbs.push({ name: displayName, isLast: true, url: '' });
       } else {
         var dirPath = parts.slice(0, i + 1).join('/');
-        crumbs.push({ name: displayName, isLast: false, url: '/doc?path=' + encodeURIComponent(dirPath + '/README.md') });
+        // 服务端会根据目录是否存在 README.md 决定跳转到文档或目录列表。
+        crumbs.push({ name: displayName, isLast: false, url: '/dir?path=' + encodeURIComponent(dirPath) });
       }
     }
     return crumbs;
@@ -54,7 +55,17 @@
     return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
   }
 
-  function updateBreadcrumbs(docPath) {
+  function updateBreadcrumbs(docPath, loadedDocument) {
+    var currentBreadcrumbs = document.querySelector('.breadcrumbs');
+    if (!currentBreadcrumbs) return;
+
+    // 服务端已经掌握真实目录结构，优先复用它生成的面包屑，避免客户端猜测 README.md。
+    var serverBreadcrumbs = loadedDocument && loadedDocument.querySelector('.breadcrumbs');
+    if (serverBreadcrumbs) {
+      currentBreadcrumbs.innerHTML = serverBreadcrumbs.innerHTML;
+      return;
+    }
+
     var crumbs = buildBreadcrumbsFromPath(docPath);
     renderBreadcrumbs(crumbs);
   }
@@ -194,7 +205,7 @@
         if (newTitle) document.title = newTitle.textContent;
         window.currentDocPath = pathFromUrl || pathFromHref(absoluteUrl);
         updateActiveLink(window.currentDocPath);
-        updateBreadcrumbs(window.currentDocPath);
+        updateBreadcrumbs(window.currentDocPath, doc);
         if (typeof window.buildDocToc === 'function') window.buildDocToc();
         if (typeof window.scrollToDocHash === 'function') window.scrollToDocHash();
 
