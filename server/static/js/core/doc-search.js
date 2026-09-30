@@ -2,6 +2,8 @@
   'use strict';
 
   var MAX_RESULTS = 12;
+  var MAX_HISTORY = 10;
+  var HISTORY_DELAY = 800;
   var SNIPPET_LENGTH = 160;
   var SEARCH_INDEX_PATH = '/search-index.json';
   var state = {
@@ -12,7 +14,76 @@
     lastFocus: null,
     results: [],
     selectedIndex: -1,
+    history: null,
+    pendingQuery: '',
+    historyTimer: null,
+    composing: false,
   };
+
+  function historyKey() {
+    return String((window.DOCNEST_CONFIG || {}).storageKeyPrefix || 'docnest') + ':search-history';
+  }
+
+  function readHistory() {
+    if (state.history) return state.history;
+    var saved;
+    try {
+      saved = JSON.parse(window.localStorage.getItem(historyKey()));
+    } catch (_) {}
+    var seen = new Set();
+    state.history = (Array.isArray(saved) ? saved : []).filter(function(query) {
+      if (typeof query !== 'string' || !query.trim()) return false;
+      var key = getQueryTerms(query).join(' ');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map(function(query) { return query.trim(); }).slice(0, MAX_HISTORY);
+    return state.history;
+  }
+
+  function savePendingQuery() {
+    window.clearTimeout(state.historyTimer);
+    state.historyTimer = null;
+    var query = state.pendingQuery;
+    state.pendingQuery = '';
+    if (!query || state.composing || searchDocuments(query).length === 0) return;
+    var key = getQueryTerms(query).join(' ');
+    state.history = [query].concat(readHistory().filter(function(item) {
+      return getQueryTerms(item).join(' ') !== key;
+    })).slice(0, MAX_HISTORY);
+    try {
+      window.localStorage.setItem(historyKey(), JSON.stringify(state.history));
+    } catch (_) {}
+  }
+
+  function renderHistory() {
+    state.modal.history.textContent = '';
+    var queries = readHistory().filter(function(query) { return searchDocuments(query).length > 0; });
+    state.modal.history.hidden = queries.length === 0;
+    if (!queries.length) return false;
+
+    var heading = document.createElement('div');
+    heading.className = 'doc-search-history__title';
+    heading.textContent = '最近搜索';
+    var items = document.createElement('div');
+    items.className = 'doc-search-history__items';
+    queries.forEach(function(query) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'doc-search-history__item';
+      button.textContent = query;
+      button.addEventListener('click', function() {
+        state.modal.input.value = query;
+        renderResults();
+        savePendingQuery();
+        state.modal.input.focus();
+      });
+      items.appendChild(button);
+    });
+    state.modal.history.appendChild(heading);
+    state.modal.history.appendChild(items);
+    return true;
+  }
 
   function getAssetUrl(path) {
     var base = document.querySelector('base');
@@ -241,12 +312,22 @@
   function renderResults() {
     if (!state.modal) return;
     var query = state.modal.input.value.trim();
+    window.clearTimeout(state.historyTimer);
+    if (!query) savePendingQuery();
+    state.pendingQuery = '';
     state.modal.results.textContent = '';
+    state.modal.results.hidden = false;
+    state.modal.history.hidden = true;
+    state.modal.input.removeAttribute('aria-activedescendant');
     state.results = [];
     state.selectedIndex = -1;
 
     if (!query) {
       setStatus('输入标题、目录或正文关键词');
+      if (renderHistory()) {
+        state.modal.results.hidden = true;
+        return;
+      }
       state.modal.results.appendChild(createEmptyState('支持中文关键词、英文词组和文档路径搜索'));
       return;
     }
@@ -260,6 +341,10 @@
     }
 
     state.results = matches.slice(0, MAX_RESULTS);
+    if (!state.composing) {
+      state.pendingQuery = query;
+      state.historyTimer = window.setTimeout(savePendingQuery, HISTORY_DELAY);
+    }
     setStatus(matches.length > MAX_RESULTS
       ? '找到 ' + matches.length + ' 篇文档，显示最相关的 ' + MAX_RESULTS + ' 篇'
       : '找到 ' + matches.length + ' 篇文档');
@@ -287,6 +372,7 @@
           '<kbd class="doc-search-input-key">Esc</kbd>',
         '</div>',
         '<div class="doc-search-status" id="doc-search-status" role="status" aria-live="polite"></div>',
+        '<div class="doc-search-history" role="group" aria-label="最近搜索" hidden></div>',
         '<div class="doc-search-results" id="doc-search-results" role="listbox" aria-label="搜索结果"></div>',
         '<div class="doc-search-hint"><span>↑↓ 选择</span><span>Enter 打开</span><span>Esc 关闭</span></div>',
       '</div>',
@@ -297,9 +383,19 @@
       input: overlay.querySelector('.doc-search-input'),
       status: overlay.querySelector('.doc-search-status'),
       results: overlay.querySelector('.doc-search-results'),
+      history: overlay.querySelector('.doc-search-history'),
       close: overlay.querySelector('.doc-search-modal__close'),
     };
     modal.input.addEventListener('input', renderResults);
+    modal.input.addEventListener('compositionstart', function() {
+      state.composing = true;
+      window.clearTimeout(state.historyTimer);
+      state.pendingQuery = '';
+    });
+    modal.input.addEventListener('compositionend', function() {
+      state.composing = false;
+      renderResults();
+    });
     modal.close.addEventListener('click', closeSearch);
     overlay.addEventListener('click', function(event) {
       if (event.target === overlay) closeSearch();
@@ -336,6 +432,10 @@
 
   function openSearch() {
     if (!state.modal) createModal();
+    if (!state.modal.overlay.hidden) {
+      state.modal.input.focus();
+      return;
+    }
     state.lastFocus = document.activeElement;
     state.modal.overlay.hidden = false;
     state.modal.overlay.setAttribute('aria-hidden', 'false');
@@ -343,6 +443,8 @@
     state.modal.input.disabled = true;
     state.modal.input.value = '';
     state.modal.results.textContent = '';
+    state.modal.results.hidden = false;
+    state.modal.history.hidden = true;
     setStatus('正在加载文档索引…');
     window.requestAnimationFrame(function() { state.modal.input.focus(); });
 
@@ -361,6 +463,8 @@
 
   function closeSearch() {
     if (!state.modal || state.modal.overlay.hidden) return;
+    savePendingQuery();
+    state.composing = false;
     state.modal.overlay.hidden = true;
     state.modal.overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('doc-search-open');
@@ -383,6 +487,8 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       closeSearch();
+    } else if (event.target !== state.modal.input) {
+      return;
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
       moveSelection(1);
@@ -414,6 +520,7 @@
     var isMac = /Mac|iPhone|iPad|iPod/i.test((window.navigator && window.navigator.platform) || '');
     if (shortcut) shortcut.textContent = isMac ? '⌘ K' : 'Ctrl K';
     document.addEventListener('keydown', onKeyDown);
+    window.addEventListener('pagehide', savePendingQuery);
   }
 
   if (document.readyState === 'loading') {
