@@ -180,7 +180,7 @@ async function storageReadAsset(assetPath) {
 
 // 配置 markdown-it
 const md = new MarkdownIt({
-  html: true,
+  html: process.env.DOCS_ALLOW_RAW_HTML !== 'false',
   linkify: true,
   typographer: true,
   highlight: function (str, lang) {

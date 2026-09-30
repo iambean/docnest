@@ -69,6 +69,8 @@ export default defineConfig({
 搜索框为空时显示最近搜索：仅记录有结果的关键词，去重后保留最近 10 条，点击即可再次搜索。
 历史保存在当前浏览器，按 `site.storageKeyPrefix` 隔离；不上传服务器。
 
+多空间托管场景可设置 `DOCS_ALLOW_RAW_HTML=false`，把 Markdown 中的原始 HTML 显示为文本，避免文档内脚本取得宿主页面权限；Markdown 语法与 Mermaid 不受影响。默认保留原始 HTML 兼容行为。
+
 PDF、页面水印和图表外带能力由一个开关统一控制，默认使用普通阅读模式：
 
 ```js
