@@ -1,5 +1,5 @@
 <header class="header">
-  <div class="header-content">
+  <div class="header-content<%= !docsRestrictedMode ? ' header-content-with-search' : '' %>">
     <div class="header-title-group">
       <h1>
         <% if (docsLogo) { %><img class="brand-logo" src="<%= docsLogo %>" alt=""><% } else { %><span class="brand-fallback" aria-hidden="true"><span class="brand-fallback-emoji">📚</span><span class="brand-fallback-shape"></span></span><% } %>
@@ -11,8 +11,6 @@
         <p class="subtitle"><%= docsSubtitle %></p>
       <% } %>
     </div>
-    <div class="header-meta">
-      <div class="header-actions">
         <% if (!docsRestrictedMode) { %>
           <button type="button" id="doc-search-trigger" class="header-action-btn doc-search-trigger" aria-haspopup="dialog" aria-controls="doc-search-modal" title="搜索文档（⌘K / Ctrl K）">
             <span class="doc-search-icon" aria-hidden="true">⌕</span>
@@ -20,6 +18,8 @@
             <kbd class="doc-search-shortcut" aria-label="打开搜索快捷键">⌘ K</kbd>
           </button>
         <% } %>
+    <div class="header-meta">
+      <div class="header-actions">
         <% if (typeof showPrintButton !== 'undefined' && showPrintButton && !docsRestrictedMode) { %>
           <button type="button" id="print-doc-btn" class="header-action-btn print-btn" title="打印当前文章">
             <span class="print-icon">🖨️</span>
