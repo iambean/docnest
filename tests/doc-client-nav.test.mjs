@@ -8,6 +8,36 @@ const clientNavSource = await readFile(
   'utf8',
 )
 
+test('document content links leave standalone HTML assets to browser navigation', async () => {
+  const view = await readFile(new URL('../server/views/doc.ejs', import.meta.url), 'utf8')
+  const start = view.indexOf("mainContent.addEventListener('click', function(e) {")
+  const end = view.indexOf('\n        });', start) + '\n        });'.length
+  assert.ok(start >= 0 && end > start)
+  const handlerSource = view.slice(start, end)
+
+  for (const href of ['/doc-asset/guide.html', '/documents/doc-asset/开发者文档/guide.html?mode=read#chart', '/doc?path=next.md']) {
+    let onClick
+    let prevented = false
+    const navigations = []
+    const location = { href: 'https://example.test/documents/doc?path=README.md', origin: 'https://example.test' }
+    vm.runInNewContext(handlerSource, {
+      mainContent: { addEventListener: (_, handler) => { onClick = handler } },
+      sidebar: { contains: () => false },
+      document: { baseURI: 'https://example.test/documents/', querySelectorAll: () => [] },
+      window: { location, navigateToDoc: (url) => navigations.push(url) },
+      currentNorm: 'README',
+      pathNorm: (value) => value.replace(/\.(html|md)$/i, ''),
+      URL,
+      console,
+    })
+    const link = { getAttribute: () => href, href: new URL(href, location.origin).href }
+    onClick({ target: { closest: () => link }, preventDefault: () => { prevented = true } })
+    const markdown = href.startsWith('/doc?')
+    assert.equal(prevented, markdown, href + ' must preserve its intended navigation')
+    assert.equal(navigations.length, markdown ? 1 : 0, href)
+  }
+})
+
 function createNavigationHarness({ currentPath, responsePath, responseBreadcrumbs }) {
   const article = { innerHTML: '', style: {} }
   const breadcrumbs = { innerHTML: '<ol><li>旧面包屑</li></ol>' }

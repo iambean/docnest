@@ -294,6 +294,15 @@
           // 检查是否是文档系统内的链接
           const href = link.getAttribute('href');
           if (!href) return;
+
+          // Assets, including standalone HTML pages, need full browser navigation;
+          // they do not contain the Markdown article expected by navigateToDoc.
+          try {
+            const linkUrl = new URL(href, document.baseURI || window.location.href);
+            if (/(^|\/)doc-asset\//.test(linkUrl.pathname)) return;
+          } catch (_) {
+            return;
+          }
           
           // 判断是否是文档系统内的链接（排除外部链接、锚点、目录页链接）
           const isDocLink = (href.startsWith('/doc?') ||
