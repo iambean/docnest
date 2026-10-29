@@ -38,6 +38,32 @@ async function waitForReady(port) {
   throw new Error('PDF 导出测试服务器启动超时')
 }
 
+test('moved documents retain old links only when the filename is unique within the original directory', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-moved-docs-'))
+  await writeFile(path.join(root, 'docnest.config.mjs'), 'export default { docsDir: "docs", server: { openBrowser: false } }')
+  for (const name of ['开发者文档/运维手册/运行诊断.md', '客户文档/运行诊断.md', '开发者文档/归档甲/同名.md', '开发者文档/归档乙/同名.md']) {
+    await mkdir(path.dirname(path.join(root, 'docs', name)), { recursive: true })
+    await writeFile(path.join(root, 'docs', name), '# ' + name + '\n')
+  }
+  const port = await findFreePort()
+  const child = spawn(process.execPath, [cliPath, 'serve', '--no-open', '--port', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] })
+  t.after(async () => {
+    if (child.exitCode !== null) return
+    child.kill('SIGTERM')
+    await once(child, 'exit').catch(() => undefined)
+  })
+  await waitForReady(port)
+  const request = (name) => fetch(`http://127.0.0.1:${port}/doc?path=${encodeURIComponent(name)}`, { redirect: 'manual' })
+  const moved = await request('开发者文档/运行诊断.md')
+  assert.equal(moved.status, 302)
+  assert.equal(moved.headers.get('location'), `/doc?path=${encodeURIComponent('开发者文档/运维手册/运行诊断.md')}`)
+  assert.equal((await request('开发者文档/运维手册/运行诊断.md')).status, 200)
+  assert.equal((await request('开发者文档/同名.md')).status, 404)
+  assert.equal((await request('运行诊断.md')).status, 404)
+  assert.equal((await request('不存在的目录/运行诊断.md')).status, 404)
+  assert.equal((await request('开发者文档/归档甲/同名.md')).status, 200)
+})
+
 test('Mermaid fences keep diagram typography and literal HTML labels outside code blocks', async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-mermaid-labels-'))
   await mkdir(path.join(root, 'docs'))

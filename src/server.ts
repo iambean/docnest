@@ -745,7 +745,10 @@ async function resolveDocPath(requestedPath) {
     if (await storageFileExists(resolvedPath)) {
       return { resolvedPath };
     }
-    return null;
+    // A document may have moved into a subdirectory during catalog cleanup.
+    // Resolve only an unambiguous filename inside its original directory.
+    const movedPath = await findFileInTree(resolvedDirPath, fileName);
+    return movedPath ? { resolvedPath: movedPath } : null;
   }
   
   // 如果只是文件名，尝试在整个文档目录中查找
@@ -761,28 +764,28 @@ async function resolveDocPath(requestedPath) {
   return null;
 }
 
-// 在目录树中查找文件
-async function findFileInTree(dir, fileName, basePath = '') {
-  try {
-    const effectiveBasePath = basePath || dir || '';
-    const entries = await storageReadDir(effectiveBasePath);
-    
+// Find one exact filename; ambiguity or an unreadable subtree must not redirect.
+async function findFileInTree(dir, fileName) {
+  const matches = [];
+  async function visit(basePath) {
+    const entries = await storageReadDir(basePath);
     for (const entry of entries) {
       if (entry.name.startsWith('.')) continue;
-      
-      const relativePath = joinDocPath(effectiveBasePath, entry.name);
-      
+      const relativePath = joinDocPath(basePath, entry.name);
       if (entry.isDirectory) {
-        const found = await findFileInTree('', fileName, relativePath);
-        if (found) return found;
+        await visit(relativePath);
       } else if (entry.isFile && entry.name === fileName && entry.name.endsWith('.md')) {
-        return relativePath;
+        matches.push(relativePath);
       }
+      if (matches.length > 1) return;
     }
-  } catch (e) {
-    // 忽略错误
   }
-  return null;
+  try {
+    await visit(dir || '');
+  } catch (e) {
+    return null;
+  }
+  return matches.length === 1 ? matches[0] : null;
 }
 
 // 构建面包屑：基于文档路径
