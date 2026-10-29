@@ -184,11 +184,6 @@ const md = new MarkdownIt({
   linkify: true,
   typographer: true,
   highlight: function (str, lang) {
-    // 特殊处理 Mermaid 图表
-    if (lang === 'mermaid') {
-      return `<div class="mermaid">${str}</div>`;
-    }
-    
     // 其他代码块使用 highlight.js
     if (lang && hljs.getLanguage(lang)) {
       try {
@@ -198,6 +193,17 @@ const md = new MarkdownIt({
     return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`;
   },
 });
+
+// Mermaid is a diagram, not highlighted code. A code/pre ancestor changes
+// the inherited font after Mermaid measures HTML labels, clipping their text.
+const renderCodeFence = md.renderer.rules.fence;
+md.renderer.rules.fence = function (tokens, index, options, env, renderer) {
+  const token = tokens[index];
+  if (token.info.trim().split(/\s+/)[0] === 'mermaid') {
+    return `<div class="mermaid">${md.utils.escapeHtml(token.content)}</div>\n`;
+  }
+  return renderCodeFence(tokens, index, options, env, renderer);
+};
 
 function slugifyHeading(text) {
   return (text || '')

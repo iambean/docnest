@@ -89,7 +89,7 @@ html.docnest-restricted .markdown-body .mermaid-download-btn {
   color: var(--linear-text, rgba(15, 23, 42, 0.42));
   font: 700 clamp(0.75rem, 1.5vw, 1.5rem)/1 var(--doc-font-mono);
   letter-spacing: 0.08em;
-  opacity: 0.12;
+  opacity: 0.04;
   transform: rotate(-24deg);
   white-space: nowrap;
 }

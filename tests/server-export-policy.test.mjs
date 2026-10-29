@@ -38,6 +38,34 @@ async function waitForReady(port) {
   throw new Error('PDF 导出测试服务器启动超时')
 }
 
+test('Mermaid fences keep diagram typography and literal HTML labels outside code blocks', async (t) => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-mermaid-labels-'))
+  await mkdir(path.join(root, 'docs'))
+  await writeFile(path.join(root, 'docnest.config.mjs'), 'export default { docsDir: "docs", server: { openBrowser: false } }')
+  const source = 'flowchart TD\n  A["push master 或 release"] -- "仅 DocNest 变化" --> B["GitHub-hosted<br/>源码检查与测试"]\n'
+  await writeFile(path.join(root, 'docs', 'README.md'), '# 图表\n\n```mermaid\n' + source + '```\n\n```text\nordinary <code>\n```\n')
+  const port = await findFreePort()
+  const child = spawn(process.execPath, [cliPath, 'serve', '--no-open', '--port', String(port)], {
+    cwd: root,
+    env: { ...process.env, DOCS_ALLOW_RAW_HTML: 'false' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  t.after(async () => {
+    if (child.exitCode !== null) return
+    child.kill('SIGTERM')
+    await once(child, 'exit').catch(() => undefined)
+  })
+  await waitForReady(port)
+  const response = await fetch(`http://127.0.0.1:${port}/doc?path=README.md`)
+  assert.equal(response.status, 200)
+  const html = await response.text()
+  assert.doesNotMatch(html, /<pre[^>]*>\s*<code[^>]*>\s*<div class="mermaid">/,
+    'a code ancestor changes label fonts after Mermaid measures them')
+  assert.match(html, /<div class="mermaid">flowchart TD[\s\S]*?GitHub-hosted&lt;br\/&gt;源码检查与测试/,
+    'HTML labels must reach Mermaid as source text, not pre-parsed DOM')
+  assert.match(html, /<pre class="hljs"><code[^>]*>ordinary &lt;code&gt;/)
+})
+
 test('normal mode restores export UI and Mermaid viewer assets', async (t) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'docnest-server-pdf-'))
   await writeFile(path.join(root, 'package.json'), JSON.stringify({ name: 'pdf-fixture' }))

@@ -1339,6 +1339,9 @@ body[data-theme="dark"] .not-found-path {
 
 /* Mermaid 图表样式 */
 .markdown-body .mermaid {
+  /* Match Mermaid's measurement fallback when a diagram font is omitted or
+     rejected by its directive sanitizer. Explicit SVG fonts still take priority. */
+  font-family: "trebuchet ms", verdana, arial, sans-serif;
   margin: 24px 0;
   text-align: center;
   background: var(--linear-bg-subtle);
